@@ -86,6 +86,62 @@ void TextureManager::LoadTexture(const std::string& filePath) {
 
 }
 
+void TextureManager::LoadRenderTexture(const std::string& filePath, const Vector4& clearColor) {
+	// 読み込み済テクスチャを検索
+	auto it = std::find_if(
+		textureDatas.begin(),
+		textureDatas.end(),
+		[&](TextureData& textureData) { return textureData.filePath == filePath; }
+	);
+	if (it != textureDatas.end()) {
+		// 読み込み済なら早期return
+		return;
+	}
+
+	// テクスチャ枚数上限チェック
+	assert(textureDatas.size() + kSRVIndexTop < DirectXBase::kMaxSRVCount);
+
+	// テクスチャファイルを読んでプログラムで扱えるようにする
+	DirectX::ScratchImage image{};
+	std::wstring filePathW = ConvertString(filePath);
+	HRESULT hr = DirectX::LoadFromWICFile(filePathW.c_str(), DirectX::WIC_FLAGS_FORCE_SRGB, nullptr, image);
+	assert(SUCCEEDED(hr));
+
+	// テクスチャデータを追加
+	textureDatas.resize(textureDatas.size() + 1);
+
+	// 追加したテクスチャデータの差印象を取得する
+	TextureData& textureData = textureDatas.back();
+
+	// テクスチャデータをtextureDatasの末尾に追加する
+	textureData.filePath = filePath;
+	textureData.metadata = image.GetMetadata();
+	textureData.resource = directxBase_->CreateRenderTextureResource(textureData.metadata, clearColor);
+
+	directxBase_->UploadTextureData(textureData.resource, image);
+
+	// テクスチャデータの要素番号をSRVのインデックスとする
+	uint32_t srvIndex = static_cast<uint32_t>(textureDatas.size() - 1) + kSRVIndexTop;
+
+	textureData.srvHandleCPU = directxBase_->GetSRVCPUDescriptorHandle(srvIndex);
+	textureData.srvHandleGPU = directxBase_->GetSRVGPUDescriptorHandle(srvIndex);
+
+	// SRVの作成
+	D3D12_SHADER_RESOURCE_VIEW_DESC renderTexturesrvDesc{};
+
+	// SRVの設定を行う
+	renderTexturesrvDesc.Format = textureData.metadata.format;
+	renderTexturesrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	renderTexturesrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D; // 2Dテクスチャ
+	renderTexturesrvDesc.Texture2D.MipLevels = UINT(textureData.metadata.mipLevels);
+
+	// 設定をもとにSRVの生成
+	directxBase_->GetDevice()->CreateShaderResourceView(textureData.resource.Get(), &renderTexturesrvDesc, textureData.srvHandleCPU);
+
+	// MipMap(ミニマップ) : 元画像より小さなテクスチャ群
+
+}
+
 uint32_t TextureManager::GetTextureIndexByFilePath(const std::string& filePath) {
 	// 読み込まれているテクスチャデータを検索
 	auto it = std::find_if(

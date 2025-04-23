@@ -526,6 +526,46 @@ ComPtr<ID3D12Resource> DirectXBase::CreateTextureResource(const DirectX::TexMeta
 	return resource;
 }
 
+// DirectX12のRenderTextureResourceを作る(書き込み可能なtexture
+Microsoft::WRL::ComPtr<ID3D12Resource> DirectXBase::CreateRenderTextureResource(const DirectX::TexMetadata& metadata, const Vector4& clearColor) {
+	// metadataを基にResourceの設定
+	D3D12_RESOURCE_DESC resourceDesc{};
+	resourceDesc.Width = UINT(metadata.width);                             // Textureの幅
+	resourceDesc.Height = UINT(metadata.height);                           // Textureの高さ
+	resourceDesc.MipLevels = UINT16(metadata.mipLevels);                   // mipmapの数
+	resourceDesc.DepthOrArraySize = UINT16(metadata.arraySize);            // 奥行き or 配列Textureの配列数
+	resourceDesc.Format = metadata.format;                                 // TextureのFormat
+	resourceDesc.SampleDesc.Count = 1;                                     // サンプリングカウント。1固定。
+	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION(metadata.dimension); // Textureの次元数。普段使っているのは2次元
+	resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;		   // RenderTargetとして利用可能にする
+
+	// 利用するHeapの設定。非常に特殊な運用。02_04exで一般的なケースがある
+	D3D12_HEAP_PROPERTIES heapProperties{};
+	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;                        // 当然VRAM上に作る
+	heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_BACK;  // WriteBackポリシーでCPUアクセス可能
+	heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;           // プロセッサの近くに配置
+
+	D3D12_CLEAR_VALUE clearValue;
+	clearValue.Format = metadata.format;
+	clearValue.Color[0] = clearColor.x;
+	clearValue.Color[1] = clearColor.y;
+	clearValue.Color[2] = clearColor.z;
+	clearValue.Color[3] = clearColor.w;
+
+	// Resourceを生成してReturnする
+	// Resourceを生成する
+	ComPtr<ID3D12Resource> resource = nullptr;
+	HRESULT hr = device->CreateCommittedResource(
+		&heapProperties,                   // Heapの設定
+		D3D12_HEAP_FLAG_NONE,              // Heapの特殊な設定。特になし
+		&resourceDesc,                     // Resourceの設定
+		D3D12_RESOURCE_STATE_RENDER_TARGET, // これｋら描画することを前提としたTextureなのでRenderTargetとして使うことから始める
+		&clearValue,                           // Clear最適値。ClearRenderTargetをこの色でClearするようにする。最適化されているので高速である。
+		IID_PPV_ARGS(&resource));
+	assert(SUCCEEDED(hr));
+	return resource;
+}
+
 void DirectXBase::UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage& mipImages) {
 	// Meta情報を取得
 	const DirectX::TexMetadata& metadata = mipImages.GetMetadata();

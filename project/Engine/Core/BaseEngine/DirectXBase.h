@@ -67,6 +67,9 @@ public:
 	// DirectX12のTextureResourceを作る
 	Microsoft::WRL::ComPtr<ID3D12Resource> CreateTextureResource(const DirectX::TexMetadata& metadata);
 
+	// DirectX12のRenderTextureResourceを作る(書き込み可能なtexture
+	Microsoft::WRL::ComPtr<ID3D12Resource> CreateRenderTextureResource(const DirectX::TexMetadata& metadata, const Vector4& clearColor);
+
 	void UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage& mipImages);
 
 private:

@@ -3,6 +3,7 @@
 #include <string>
 #include <wrl.h>
 #include <vector>
+#include "Vector4.h"
 
 class DirectXBase;
 
@@ -37,6 +38,12 @@ public:
 	/// </summary>
 	/// <param name="filePath">テクスチャファイルのパス</param>
 	void LoadTexture(const std::string& filePath);
+
+	/// <summary>
+	/// Renderテクスチャファイルの読み込み
+	/// </summary>
+	/// <param name="filePath">テクスチャファイルのパス</param>
+	void LoadRenderTexture(const std::string& filePath, const Vector4& clearColor = {1.0f, 1.0f, 1.0f, 1.0f});
 
 	// SRVインデックスの開始番号
 	uint32_t GetTextureIndexByFilePath(const std::string& filePath);

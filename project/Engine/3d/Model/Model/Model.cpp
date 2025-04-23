@@ -36,7 +36,7 @@ void Model::Initialize(std::string directoryPath, std::string filename, bool ena
 	materialData->specularColor = {1.0f, 1.0f, 1.0f};
 
 	// テクスチャ読み込み
-	TextureManager::GetInstance()->LoadTexture(modelData.material.textureFilePath);
+	TextureManager::GetInstance()->LoadRenderTexture(modelData.material.textureFilePath, {1.0f, 0.0f, 0.0f, 1.0f});
 	// 読み込んだテクスチャの番号尾を取得
 	modelData.material.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(modelData.material.textureFilePath);
 }

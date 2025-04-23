@@ -5,7 +5,7 @@
 
 void GameScene::Initialize() {
 
-	ModelManager::GetInstance()->LoadModel("Resources/Model/obj", "stage.obj");
+	ModelManager::GetInstance()->LoadModel("Resources/Model/obj", "terrain.obj", true);
 
 	TextureManager::GetInstance()->LoadTexture("Resources/uvChecker.png");
 
@@ -19,7 +19,7 @@ void GameScene::Initialize() {
 
 	object3d = new Object3d();
 	object3d->Initialize();
-	object3d->SetModel("stage.obj");
+	object3d->SetModel("terrain.obj");
 
 	sprite = new Sprite();
 	sprite->Initialize("Resources/uvChecker.png");
