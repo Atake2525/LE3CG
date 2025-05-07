@@ -167,15 +167,70 @@ void ParticleManager::InitializeVetexData() {
 	vertexData[3].texcoord = { 0.0f, 1.0f };
 }
 
+// マルチスレッド化予定
+ModelData Model::LoadModelFile(const std::string& directoryPath, const std::string& filename) {
+	ModelData modelData;            // 構築するModelData
+	Assimp::Importer importer;
+	std::string filePath = directoryPath + "/" + filename;
+	const aiScene* scene = importer.ReadFile(filePath.c_str(), aiProcess_FlipWindingOrder | aiProcess_FlipUVs | aiProcess_Triangulate);
+	assert(scene->HasMeshes()); // メッシュが無いのは対応しない
+
+	for (uint32_t meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex)
+	{
+		aiMesh* mesh = scene->mMeshes[meshIndex];
+		assert(mesh->HasNormals()); // 法線が無いMeshは今回は非対応
+		assert(mesh->HasTextureCoords(0)); // TexcoordsがないMeshは今回は非対応
+		// ここからMeshの中身(Face)の解析を行っていく
+		for (uint32_t faceIndex = 0; faceIndex < mesh->mNumFaces; ++faceIndex)
+		{
+			aiFace& face = mesh->mFaces[faceIndex];
+
+			assert(face.mNumIndices == 3); // 3角形のみサポート
+			// ここからFaceの中身(Vertex)の解析を行っていく
+			for (uint32_t element = 0; element < face.mNumIndices; ++element)
+			{
+				uint32_t vertexIndex = face.mIndices[element];
+				aiVector3D& position = mesh->mVertices[vertexIndex];
+				aiVector3D& normal = mesh->mNormals[vertexIndex];
+				aiVector3D& texcoord = mesh->mTextureCoords[0][vertexIndex];
+				VertexData vertex;
+				vertex.position = { position.x, position.y, position.z, 1.0f };
+				vertex.normal = { normal.x, normal.y, normal.z };
+				vertex.texcoord = { texcoord.x, texcoord.y };
+				// aiProcess_MakeLeftHandedはz*=-1で、右手->左手に変換するので手動で対処
+				vertex.position.x *= -1.0f;
+				vertex.normal.x *= -1.0f;
+				modelData.vertices.push_back(vertex);
+			}
+
+		}
+	}
+	for (uint32_t materialIndex = 0; materialIndex < scene->mNumMaterials; ++materialIndex)
+	{
+		aiMaterial* material = scene->mMaterials[materialIndex];
+		if (material->GetTextureCount(aiTextureType_DIFFUSE) != 0)
+		{
+			aiString textureFilePath;
+			material->GetTexture(aiTextureType_DIFFUSE, 0, &textureFilePath);
+			modelData.material.textureFilePath = directoryPath + "/" + textureFilePath.C_Str();
+		}
+		else
+		{
+			modelData.material.textureFilePath = "Resources/Debug/white1x1.png";
+		}
+	}
+	return modelData;
+}
+
 void ParticleManager::CreateVertexResource() {
 	// 頂点リソースの作成
-	vertexResource = directxBase_->CreateBufferResource(sizeof(VertexData) * 6);
+	vertexResource = directxBase_->CreateBufferResource(sizeof(VertexData) * modelData->vertices.size());
 }
 
 void ParticleManager::CreateVertexxBufferView() {
 	vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
 	// 使用するリソースのサイズは頂点6つ分のサイズ
-	vertexBufferView.SizeInBytes = sizeof(VertexData) * 6;
+	vertexBufferView.SizeInBytes = sizeof(VertexData) * modelData->vertices.size();
 	// 1頂点あたりのサイズ
 	vertexBufferView.StrideInBytes = sizeof(VertexData);
 }
@@ -183,4 +238,5 @@ void ParticleManager::CreateVertexxBufferView() {
 void ParticleManager::MappingVertexData() {
 	// VertexResourceにデータを書き込むためのアドレスを取得してvertexDataに割り当てる
 	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
+	std::memcpy(vertexData, modelData->vertices.data(), sizeof(VertexData) * modelData->vertices.size());
 }
