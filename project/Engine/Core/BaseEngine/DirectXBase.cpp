@@ -61,7 +61,7 @@ ComPtr<ID3D12Resource> DirectXBase::CreateRenderTextureResource(ComPtr<ID3D12Dev
 	resourceDesc.Height = height;                                 // Textureの高さ
 	resourceDesc.MipLevels = 1;                                   // mipmapの数
 	resourceDesc.DepthOrArraySize = 1;                            // 奥行 or 配列Textureの配列数
-	resourceDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;          // DepthStencilとして利用可能なフォーマット
+	resourceDesc.Format = format;          // DepthStencilとして利用可能なフォーマット
 	resourceDesc.SampleDesc.Count = 1;                            // サンプルカウント。1固定
 	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;  // 2次元
 	resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET; // DepthStencilとして使う通知
@@ -308,7 +308,8 @@ void DirectXBase::PreDraw2() {
 	//commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	// 指定した色で画面全体をクリアする
-	float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f }; // 青っぽい色。RGBAの順
+	//float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f }; // 青っぽい色。RGBAの順
+	float clearColor[] = { 1.0f, 0.0f, 0.0f, 1.0f }; // RGBAの順
 	commandList->ClearRenderTargetView(cpuHandles[backBufferIndex], clearColor, 0, nullptr);
 
 	// 描画用のDescriptorHeapの設定
