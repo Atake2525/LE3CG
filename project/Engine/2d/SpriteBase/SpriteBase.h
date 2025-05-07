@@ -1,6 +1,7 @@
 #include <d3d12.h>
 #include <wrl.h>
 #include <dxcapi.h>
+#include "Shader.h"
 #pragma once
 
 class DirectXBase;
@@ -60,6 +61,7 @@ private:
 	// シリアライズしてバイナリにする
 	Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob = nullptr;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
+
 	// バイナリをもとに作成
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature = nullptr;
 	// InputLayout
@@ -70,9 +72,12 @@ private:
 	// RasiterzerStateの設定
 	D3D12_RASTERIZER_DESC rasterizerDesc{};
 
-	Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob;
+	/*Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob;
 
-	Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob;
+	Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob;*/
+
+	Shader ps;
+	Shader vs;
 
 	// DepthStencilStateの設定
 	D3D12_DEPTH_STENCIL_DESC depthStencilDesc{};
