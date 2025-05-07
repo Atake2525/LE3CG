@@ -60,9 +60,14 @@ void MyGame::Draw() {
 	// ImGuiの内部コマンドを生成する
 	ImGui::Render();
 
-	directxBase->PreDraw();
+
+	directxBase->PreDraw2();
 
 	gameScene->Draw();
+
+	directxBase->PostDraw2();
+
+	directxBase->PreDraw();
 
 	// 実際のcommandListのImGuiの描画コマンドを積む
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), directxBase->GetCommandList().Get());

@@ -26,6 +26,12 @@ public:
 	// 描画後処理
 	void PostDraw();
 
+	// 描画前処理
+	void PreDraw2();
+
+	// 描画後処理
+	void PostDraw2();
+
 	// 終了処理
 	void Finalize();
 
@@ -45,6 +51,8 @@ public:
 	// DSVとRTVも作る
 
 	std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, 2> swapChainResources;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> renderTextureResource;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> depthStencilResource;
 
@@ -76,6 +84,9 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Device> device;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> CreateDepthStencilTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, int32_t width, int32_t height);
+
+	// RenderTextureの生成
+	Microsoft::WRL::ComPtr<ID3D12Resource> CreateRenderTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, int32_t width, int32_t height, DXGI_FORMAT format, const Vector4& clearColor);
 
 	// FPS固定初期化
 	void InitializeFixFPS();
@@ -166,6 +177,8 @@ private:
 	// SwapChainからResourceを引っ張ってくる
 	//std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, 2> swapChainResources;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[2];
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandles[2];
 	//// フェンス
 	Microsoft::WRL::ComPtr<ID3D12Fence> fence = nullptr;
 	uint64_t fenceValue = 0;

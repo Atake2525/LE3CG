@@ -53,6 +53,45 @@ ComPtr<ID3D12Resource> DirectXBase::CreateDepthStencilTextureResource(Microsoft:
 	return resource;
 }
 
+// RenderTextureの生成
+ComPtr<ID3D12Resource> DirectXBase::CreateRenderTextureResource(ComPtr<ID3D12Device> device, int32_t width, int32_t height, DXGI_FORMAT format, const Vector4& clearColor) {
+	// 生成するResouceの設定
+	D3D12_RESOURCE_DESC resourceDesc{};
+	resourceDesc.Width = width;                                   // Textureの幅
+	resourceDesc.Height = height;                                 // Textureの高さ
+	resourceDesc.MipLevels = 1;                                   // mipmapの数
+	resourceDesc.DepthOrArraySize = 1;                            // 奥行 or 配列Textureの配列数
+	resourceDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;          // DepthStencilとして利用可能なフォーマット
+	resourceDesc.SampleDesc.Count = 1;                            // サンプルカウント。1固定
+	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;  // 2次元
+	resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET; // DepthStencilとして使う通知
+
+	// 利用するHeapの設定
+	D3D12_HEAP_PROPERTIES heapProperties{};
+	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT; // VRAM上に作る
+
+	// 深度値のクリア設定
+	D3D12_CLEAR_VALUE clearValue{};
+	clearValue.Format = format;
+	clearValue.DepthStencil.Depth = 1.0f;              // 1.0f(最大値)でクリア
+	clearValue.Color[0] = clearColor.x;
+	clearValue.Color[1] = clearColor.y;
+	clearValue.Color[2] = clearColor.z;
+	clearValue.Color[3] = clearColor.w;
+
+	// Resourceの作成
+	ComPtr<ID3D12Resource> resource = nullptr;
+	HRESULT hr = device->CreateCommittedResource(
+		&heapProperties,                  // Heapの設定
+		D3D12_HEAP_FLAG_NONE,             // Heapの特殊な設定。特になし
+		&resourceDesc,                    // Resourceの設定
+		D3D12_RESOURCE_STATE_RENDER_TARGET, // 深度値を書き込む状態にしておく
+		&clearValue,                 // Clear最適値
+		IID_PPV_ARGS(&resource));         // 作成するResourceポインタへのポインタ
+	assert(SUCCEEDED(hr));
+	return resource;
+}
+
 void DirectXBase::InitializeDevice() {
 #ifdef _DEBUG
 	ComPtr<ID3D12Debug1> debugController = nullptr;
@@ -243,6 +282,88 @@ void DirectXBase::PostDraw() {
 	assert(SUCCEEDED(hr));
 }
 
+// 描画前処理
+void DirectXBase::PreDraw2() {
+	// これから書き込むバックバッファのインデックスを取得
+	UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
+
+	// TransitionのBarrierの設定
+	// 今回のバリアはTransition
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	// Noneにしておく
+	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	// バリアを張る対象のリソース。現在のバックバッファに対して行う
+	barrier.Transition.pResource = swapChainResources[backBufferIndex].Get();
+	// 遷移前(現在)のRecourceState
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+	// 遷移後のResourceState
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	// TransitionBarrierを張る
+	commandList->ResourceBarrier(1, &barrier);
+
+	// 描画先のRTVとDSVを設定する
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	commandList->OMSetRenderTargets(1, &cpuHandles[backBufferIndex], false, &dsvHandle);
+	// 指定した深度で画面全体をクリアする
+	//commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+	// 指定した色で画面全体をクリアする
+	float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f }; // 青っぽい色。RGBAの順
+	commandList->ClearRenderTargetView(cpuHandles[backBufferIndex], clearColor, 0, nullptr);
+
+	// 描画用のDescriptorHeapの設定
+	ComPtr<ID3D12DescriptorHeap> descriptorHeaps[] = { srvDescriptorHeap };
+	commandList->SetDescriptorHeaps(1, descriptorHeaps->GetAddressOf());
+
+	commandList->RSSetViewports(1, &viewPort);       // Viewportを設定
+	commandList->RSSetScissorRects(1, &scissorRect); // Scirssorを設定
+}
+
+// 描画後処理
+void DirectXBase::PostDraw2() {
+	// これから書き込むバックバッファのインデックスを取得
+	UINT bbIndex = swapChain->GetCurrentBackBufferIndex();
+	// 画面に描く処理はすべて終わり、画面に移すので、状態を遷移
+	// 今回はRenderTargetからPresentにする
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+	// TransitionBarrierを張る
+	commandList->ResourceBarrier(1, &barrier);
+
+	// コマンドリストの内容を確定させる。すべてのコマンドを積んでからCloseすること
+	hr = commandList->Close();
+	assert(SUCCEEDED(hr));
+
+	// GPUにコマンドリストの実行を行わせる
+	ComPtr<ID3D12CommandList> commandLists[] = { commandList };
+	commandQueue->ExecuteCommandLists(1, commandLists->GetAddressOf());
+	// GPUとOSに画面の交換を行うよう通知する
+	swapChain->Present(1, 0);
+
+	// Fenceの値を更新
+	fenceValue++;
+	// GPUがここまでたどり着いたときに、Fenceの値を指定した値に代入するようにSignalを送る
+	commandQueue->Signal(fence.Get(), fenceValue);
+
+	// Fenceの値が指定したSignal値にたどり着いているか確認する
+	// GetCompleteDValueの初期化はFence作成時に渡した初期値
+	if (fence->GetCompletedValue() < fenceValue) {
+		// 指定したSignalにたどり着いていないので、たどり着くまで待つようにイベントを設定する
+		fence->SetEventOnCompletion(fenceValue, fenceEvent);
+		// イベント待つ
+		WaitForSingleObject(fenceEvent, INFINITE);
+	}
+
+	// FPS 固定
+	UpdateFixFPS();
+
+	// 次のフレーム用のコマンドリストを準備
+	hr = commandAllocator->Reset();
+	assert(SUCCEEDED(hr));
+	hr = commandList->Reset(commandAllocator.Get(), nullptr);
+	assert(SUCCEEDED(hr));
+}
+
 void DirectXBase::InitializeCommands() {
 	// コマンドキューを作成する
 	D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
@@ -394,9 +515,14 @@ void DirectXBase::InitializeRenderTargetView() {
 	// ディスクリプタの先頭を取得する
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvStartHandle = rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
+	const Vector4 renderTargetClearValue{ 1.0f, 0.0f, 0.0f, 1.0f };
+	renderTextureResource = CreateRenderTextureResource(device, WinApp::kClientWidth, WinApp::kClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, renderTargetClearValue);
+
 	for (uint32_t i = 0; i < 2; i++) {
 		rtvHandles[i] = GetCPUDescriptorHandle(rtvDescriptorHeap, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV), i);
+		cpuHandles[i] = GetCPUDescriptorHandle(rtvDescriptorHeap, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV), i);
 		device->CreateRenderTargetView(swapChainResources[i].Get(), &rtvDesc, rtvHandles[i]);
+		device->CreateRenderTargetView(renderTextureResource.Get(), &rtvDesc, cpuHandles[i]);
 	}
 }
 
