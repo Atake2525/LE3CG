@@ -117,10 +117,15 @@ void Object3dBase::CreateRootSignature() {
 	// 三角形の中を塗りつぶす
 	rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 	// Shaderをコンパイルする
-	vertexShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Object3D.VS.hlsl", L"vs_6_0");
+	/*vertexShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Object3D.VS.hlsl", L"vs_6_0");
 	assert(vertexShaderBlob != nullptr);
 	pixelShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Object3D.PS.hlsl", L"ps_6_0");
-	assert(pixelShaderBlob != nullptr);
+	assert(pixelShaderBlob != nullptr);*/
+	vs.Load(L"Resources/shaders/Object3D.VS.hlsl", L"vs_6_0");
+	assert(vs.GetBlob() != nullptr);
+
+	ps.Load(L"Resources/shaders/Object3D.PS.hlsl", L"ps_6_0");
+	assert(ps.GetBlob() != nullptr);
 
 	// DepthStencilStateの設定
 	// Depthの機能を有効化する
@@ -136,8 +141,8 @@ void Object3dBase::CreateGraphicsPipeLineState() {
 	// PSOを作成する
 	graphicsPipelineStateDesc.pRootSignature = rootSignature.Get();                                           // RootSignature
 	graphicsPipelineStateDesc.InputLayout = inputLayoutDesc;                                                  // InputLayout
-	graphicsPipelineStateDesc.VS = {vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize()}; // VertexShader
-	graphicsPipelineStateDesc.PS = {pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize()};   // PixelShader
+	graphicsPipelineStateDesc.VS = { vs.GetBlob()->GetBufferPointer(), vs.GetBlob()->GetBufferSize()}; // VertexShader
+	graphicsPipelineStateDesc.PS = { ps.GetBlob()->GetBufferPointer(), ps.GetBlob()->GetBufferSize()};   // PixelShader
 	graphicsPipelineStateDesc.BlendState = blendDesc;                                                         // BlendState
 	graphicsPipelineStateDesc.RasterizerState = rasterizerDesc;                                               // RasterizerState
 	// 書き込むRTVの情報
