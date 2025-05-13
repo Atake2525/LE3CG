@@ -44,12 +44,14 @@ public:
 	/// </summary>
 	void Initialize(DirectXBase* directxBase);
 
+	ModelData LoadModelFile(const std::string& directoryPath, const std::string& filename);
+
 	/// <summary>
 	/// パーティクルグループの生成
 	/// </summary>
 	/// <param name="name">名前</param>
 	/// <param name="textureFilePath">テクスチャ名</param>
-	void CreateParticleGroup(const std::string name, const std::string textureFilePath);
+	void CreateParticleGroup(const std::string& name, const std::string& textureFilePath);
 
 	/// <summary>
 	/// 更新
@@ -173,6 +175,7 @@ private:
 
 	struct ParticleGroup
 	{
+		std::string particleName;
 		MaterialData materialData;
 		std::list<Particle> particle;
 		D3D12_SHADER_RESOURCE_VIEW_DESC instancingSrvDesc{};
@@ -181,7 +184,7 @@ private:
 		ParticleForGPU* instancingData;
 	};
 
-	MaterialData materialData;
+	//MaterialData materialData;
 
 	std::unordered_map<std::string, ParticleGroup> particleGroups;
 

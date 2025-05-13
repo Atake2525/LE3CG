@@ -3,6 +3,7 @@
 #include <cassert>
 #include "Logger.h"
 #include "TextureManager.h"
+#include "kMath.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -36,8 +37,98 @@ void ParticleManager::Initialize(DirectXBase* directxBase) {
 	InitializeVetexData();
 }
 
-void ParticleManager::CreateParticleGroup(const std::string name, const std::string textureFilePath) {
-	
+void ParticleManager::CreateParticleGroup(const std::string& name, const std::string& textureFilePath) {
+	auto it = particleGroups.find(name);
+	if (it != particleGroups.end())
+	{
+		// 読み込み済なら早期return
+		return;
+	}
+
+	// パーティクルの作成
+	ParticleGroup group;
+	group.numInstance = 100;
+	group.particleName = name;
+	group.materialData.textureFilePath = textureFilePath;
+	TextureManager::GetInstance()->LoadTexture(textureFilePath);
+	group.materialData.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(textureFilePath);
+	group.instancingResource = directxBase_->CreateBufferResource(sizeof(ParticleForGPU) * group.numInstance);
+	group.instancingResource->Map(0, nullptr, reinterpret_cast<void**>(&group.instancingData));
+	for (uint32_t index = 0; index < group.numInstance; index++)
+	{
+		group.instancingData[index].WVP = MakeIdentity4x4();
+		group.instancingData[index].World = MakeIdentity4x4();
+	}
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC instancingSrvDesc{};
+	instancingSrvDesc.Format = DXGI_FORMAT_UNKNOWN;
+	instancingSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	instancingSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	instancingSrvDesc.Buffer.FirstElement = 0;
+	instancingSrvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+	instancingSrvDesc.Buffer.NumElements = group.numInstance;
+	instancingSrvDesc.Buffer.StructureByteStride = sizeof(ParticleForGPU);
+	D3D12_CPU_DESCRIPTOR_HANDLE instancingSrvHandleCPU = directxBase_->GetSRVCPUDescriptorHandle(3);
+	D3D12_GPU_DESCRIPTOR_HANDLE instancingSrvHandleGPU = directxBase_->GetSRVGPUDescriptorHandle(3);
+	directxBase_->GetDevice()->CreateShaderResourceView(group.instancingResource.Get(), &instancingSrvDesc, instancingSrvHandleCPU);
+
+	group.instancingSrvDesc = instancingSrvDesc;
+
+	particleGroups.at(name) = group;
+
+}
+
+void ParticleManager::Update() {
+	for (std::unordered_map<std::string, ParticleGroup>::iterator particle = particleGroups.begin(); particle != particleGroups.end();)
+	{
+		for (std::list<Particle>::iterator particleIterator = particle.begin(); particleIterator != particles.end();) {
+			if ((*particleIterator).lifeTime <= (*particleIterator).currentTime) {
+				particleIterator = particles.erase(particleIterator); // 生存時間が過ぎたParticleはlistから消す。戻り値が次のイテレータとなる
+				continue;
+			}
+			// Fieldの範囲内のParticleには加速度を適用する
+			if (isAccelerationField) {
+				if (IsCollision(accelerationField.area, (*particleIterator).transform.translate)) {
+					(*particleIterator).velocity += accelerationField.acceleration * kDeltaTime;
+				}
+			}
+			//(*particleIterator).currentTime = (*particleIterator).currentTime;
+			(*particleIterator).currentTime += kDeltaTime;
+			float alpha = 1.0f - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
+			(*particleIterator).transform.translate += (*particleIterator).velocity * kDeltaTime;
+			if (start) {
+				// ...WorldMatrixを求めたり
+				float alpha = 1.0f - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
+				(*particleIterator).transform.translate += (*particleIterator).velocity * kDeltaTime;
+				(*particleIterator).currentTime += kDeltaTime;
+			}
+			// CG3_01_02
+			Matrix4x4 backToFrontMatrix = MakeRotateYMatrix(std::numbers::pi_v<float>);
+			Matrix4x4 billboardMatrix = Multiply(backToFrontMatrix, cameraMatrix);
+			billboardMatrix.m[3][0] = 0.0f;
+			billboardMatrix.m[3][1] = 0.0f;
+			billboardMatrix.m[3][2] = 0.0f;
+			if (!useBillboard) {
+				billboardMatrix = MakeIdentity4x4();
+			}
+			Matrix4x4 scaleMatrix = MakeScaleMatrix((*particleIterator).transform.scale);
+			Matrix4x4 translateMatrix = MakeTranslateMatrix((*particleIterator).transform.translate);
+			Matrix4x4 worldMatrix = Multiply(scaleMatrix, Multiply(billboardMatrix, translateMatrix));
+			//Matrix4x4 worldMatrix = MakeAffineMatrix(particles[index].transform.scale, particles[index].transform.rotate, particles[index].transform.translate);
+			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, viewProjectionMatrix);
+			if (numInstance < kNumMaxInstance) {
+				instancingData[numInstance].WVP = worldViewProjectionMatrix;
+				instancingData[numInstance].World = worldMatrix;
+				instancingData[numInstance].color = (*particleIterator).color;
+				instancingData[numInstance].color.w = alpha;
+				++numInstance;
+			}
+			++particleIterator;
+		}
+	}
+}
+
+void ParticleManager::Draw() {
 }
 
 void ParticleManager::InitializeRandomEngine() {
@@ -168,7 +259,7 @@ void ParticleManager::InitializeVetexData() {
 }
 
 // マルチスレッド化予定
-ModelData Model::LoadModelFile(const std::string& directoryPath, const std::string& filename) {
+ModelData ParticleManager::LoadModelFile(const std::string& directoryPath, const std::string& filename) {
 	ModelData modelData;            // 構築するModelData
 	Assimp::Importer importer;
 	std::string filePath = directoryPath + "/" + filename;
