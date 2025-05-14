@@ -5,7 +5,7 @@
 
 void GameScene::Initialize() {
 
-	ModelManager::GetInstance()->LoadModel("Resources/Model/obj", "stage.obj");
+	ModelManager::GetInstance()->LoadModel("Resources/Model/obj", "terrain.obj");
 
 	TextureManager::GetInstance()->LoadTexture("Resources/uvChecker.png");
 
@@ -19,12 +19,15 @@ void GameScene::Initialize() {
 
 	object3d = new Object3d();
 	object3d->Initialize();
-	object3d->SetModel("stage.obj");
+	object3d->SetModel("terrain.obj");
 
 	sprite = new Sprite();
 	sprite->Initialize("Resources/uvChecker.png");
 
 	cameraTransform.scale = { 1.0f, 1.0f, 1.0f };
+
+	cameraTransform.rotate.x = 0.39f;
+	cameraTransform.translate = { -0.34f, 10.0f, -27.0f };
 
 	modelTransform = object3d->GetTransform();
 }

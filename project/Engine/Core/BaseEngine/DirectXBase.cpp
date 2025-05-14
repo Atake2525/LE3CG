@@ -53,6 +53,45 @@ ComPtr<ID3D12Resource> DirectXBase::CreateDepthStencilTextureResource(Microsoft:
 	return resource;
 }
 
+// RenderTextureの生成
+ComPtr<ID3D12Resource> DirectXBase::CreateRenderTextureResource(ComPtr<ID3D12Device> device, int32_t width, int32_t height, DXGI_FORMAT format, const Vector4& clearColor) {
+	// 生成するResouceの設定
+	D3D12_RESOURCE_DESC resourceDesc{};
+	resourceDesc.Width = width;                                   // Textureの幅
+	resourceDesc.Height = height;                                 // Textureの高さ
+	resourceDesc.MipLevels = 1;                                   // mipmapの数
+	resourceDesc.DepthOrArraySize = 1;                            // 奥行 or 配列Textureの配列数
+	resourceDesc.Format = format;          // DepthStencilとして利用可能なフォーマット
+	resourceDesc.SampleDesc.Count = 1;                            // サンプルカウント。1固定
+	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;  // 2次元
+	resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET; // DepthStencilとして使う通知
+
+	// 利用するHeapの設定
+	D3D12_HEAP_PROPERTIES heapProperties{};
+	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT; // VRAM上に作る
+
+	// 深度値のクリア設定
+	D3D12_CLEAR_VALUE clearValue{};
+	clearValue.Format = format;
+	clearValue.DepthStencil.Depth = 1.0f;              // 1.0f(最大値)でクリア
+	clearValue.Color[0] = clearColor.x;
+	clearValue.Color[1] = clearColor.y;
+	clearValue.Color[2] = clearColor.z;
+	clearValue.Color[3] = clearColor.w;
+
+	// Resourceの作成
+	ComPtr<ID3D12Resource> resource = nullptr;
+	HRESULT hr = device->CreateCommittedResource(
+		&heapProperties,                  // Heapの設定
+		D3D12_HEAP_FLAG_NONE,             // Heapの特殊な設定。特になし
+		&resourceDesc,                    // Resourceの設定
+		D3D12_RESOURCE_STATE_RENDER_TARGET, // 深度値を書き込む状態にしておく
+		&clearValue,                 // Clear最適値
+		IID_PPV_ARGS(&resource));         // 作成するResourceポインタへのポインタ
+	assert(SUCCEEDED(hr));
+	return resource;
+}
+
 void DirectXBase::InitializeDevice() {
 #ifdef _DEBUG
 	ComPtr<ID3D12Debug1> debugController = nullptr;
@@ -180,6 +219,9 @@ void DirectXBase::PreDraw() {
 	// TransitionBarrierを張る
 	commandList->ResourceBarrier(1, &barrier);
 
+	// swapChainに描画させる前にRenderTargetで一度描画する
+	// 方法が分からない
+
 	// 描画先のRTVとDSVを設定する
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, &dsvHandle);
@@ -187,7 +229,7 @@ void DirectXBase::PreDraw() {
 	commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	// 指定した色で画面全体をクリアする
-	float clearColor[] = {0.1f, 0.25f, 0.5f, 1.0f}; // 青っぽい色。RGBAの順
+	float clearColor[] = {renderTargetClearValue.x, renderTargetClearValue.y, renderTargetClearValue.z, renderTargetClearValue.w }; // 青っぽい色。RGBAの順
 	commandList->ClearRenderTargetView(rtvHandles[backBufferIndex], clearColor, 0, nullptr);
 
 	// 描画用のDescriptorHeapの設定
@@ -392,12 +434,29 @@ void DirectXBase::InitializeRenderTargetView() {
 	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;      // 出力結果をSRGBに変換して書き込む
 	rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D; // 2edテクスチャとして書き込む
 	// ディスクリプタの先頭を取得する
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvStartHandle = rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	//D3D12_CPU_DESCRIPTOR_HANDLE rtvStartHandle = rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+
+	ComPtr<ID3D12Resource> renderTextureResources[2];
+
+	// SRVの設定。FormatはResourceと同じにしておく
+	D3D12_SHADER_RESOURCE_VIEW_DESC renderTextureSrvDesc{};
+	renderTextureSrvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	renderTextureSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	renderTextureSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	renderTextureSrvDesc.Texture2D.MipLevels = 1;
 
 	for (uint32_t i = 0; i < 2; i++) {
+		renderTextureResources[i] = CreateRenderTextureResource(device, WinApp::kClientWidth, WinApp::kClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, renderTargetClearValue);
 		rtvHandles[i] = GetCPUDescriptorHandle(rtvDescriptorHeap, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV), i);
 		device->CreateRenderTargetView(swapChainResources[i].Get(), &rtvDesc, rtvHandles[i]);
+
+		device->CreateRenderTargetView(renderTextureResources[i].Get(), &rtvDesc, rtvHandles[i]);
+		srvHandle = GetCPUDescriptorHandle(srvDescriptorHeap, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV), 1);
+		// SRVの生成
+		device->CreateShaderResourceView(renderTextureResources[i].Get(), &renderTextureSrvDesc, srvHandle);
 	}
+
+
 }
 
 Microsoft::WRL::ComPtr<IDxcBlob> DirectXBase::CompileShader(

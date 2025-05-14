@@ -77,6 +77,9 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> CreateDepthStencilTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, int32_t width, int32_t height);
 
+	// RenderTextureの生成
+	Microsoft::WRL::ComPtr<ID3D12Resource> CreateRenderTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, int32_t width, int32_t height, DXGI_FORMAT format, const Vector4& clearColor);
+
 	// FPS固定初期化
 	void InitializeFixFPS();
 	// FPS固定更新
@@ -166,6 +169,15 @@ private:
 	// SwapChainからResourceを引っ張ってくる
 	//std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, 2> swapChainResources;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[2];
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuHandles[2];
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> renderTextureResources[2];
+
+	const Vector4 renderTargetClearValue{ 1.0f, 0.0f, 0.0f, 1.0f }; // 分かりやすい赤にする
+
+	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle;
+
+
 	//// フェンス
 	Microsoft::WRL::ComPtr<ID3D12Fence> fence = nullptr;
 	uint64_t fenceValue = 0;
