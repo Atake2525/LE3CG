@@ -4,6 +4,7 @@
 #include "Logger.h"
 #include "TextureManager.h"
 #include "kMath.h"
+#include "Camera.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -47,7 +48,7 @@ void ParticleManager::CreateParticleGroup(const std::string& name, const std::st
 
 	// パーティクルの作成
 	ParticleGroup group;
-	group.numInstance = 100;
+	group.numInstance = 0;
 	group.particleName = name;
 	group.materialData.textureFilePath = textureFilePath;
 	TextureManager::GetInstance()->LoadTexture(textureFilePath);
@@ -59,6 +60,11 @@ void ParticleManager::CreateParticleGroup(const std::string& name, const std::st
 		group.instancingData[index].WVP = MakeIdentity4x4();
 		group.instancingData[index].World = MakeIdentity4x4();
 	}
+	group.particleFlag.isAccelerationField = false;
+	group.particleFlag.start = false;
+
+	group.accelerationField.acceleration = { 0.0f, 0.0f, 0.0f };
+	group.accelerationField.area = { {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC instancingSrvDesc{};
 	instancingSrvDesc.Format = DXGI_FORMAT_UNKNOWN;
@@ -66,7 +72,7 @@ void ParticleManager::CreateParticleGroup(const std::string& name, const std::st
 	instancingSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 	instancingSrvDesc.Buffer.FirstElement = 0;
 	instancingSrvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-	instancingSrvDesc.Buffer.NumElements = group.numInstance;
+	instancingSrvDesc.Buffer.NumElements = maxNumInstance;
 	instancingSrvDesc.Buffer.StructureByteStride = sizeof(ParticleForGPU);
 	D3D12_CPU_DESCRIPTOR_HANDLE instancingSrvHandleCPU = directxBase_->GetSRVCPUDescriptorHandle(3);
 	D3D12_GPU_DESCRIPTOR_HANDLE instancingSrvHandleGPU = directxBase_->GetSRVGPUDescriptorHandle(3);
@@ -79,49 +85,54 @@ void ParticleManager::CreateParticleGroup(const std::string& name, const std::st
 }
 
 void ParticleManager::Update() {
-	for (std::unordered_map<std::string, ParticleGroup>::iterator particle = particleGroups.begin(); particle != particleGroups.end();)
+	
+	// CG3_01_02
+	Matrix4x4 backToFrontMatrix = MakeRotateYMatrix(std::numbers::pi_v<float>);
+	Matrix4x4 billboardMatrix = Multiply(backToFrontMatrix, camera->GetWorldMatrix());
+	billboardMatrix.m[3][0] = 0.0f;
+	billboardMatrix.m[3][1] = 0.0f;
+	billboardMatrix.m[3][2] = 0.0f;
+	// 一旦常にBillboardするようにしておく
+	//if (!useBillboard) {
+	billboardMatrix = MakeIdentity4x4();
+	//}
+
+	for (std::unordered_map<std::string, ParticleGroup>::iterator particleGroup = particleGroups.begin(); particleGroup != particleGroups.end(); ++particleGroup)
 	{
-		for (std::list<Particle>::iterator particleIterator = particle.begin(); particleIterator != particles.end();) {
+		for (std::list<Particle>::iterator particleIterator = particleGroup->second.particle.begin(); particleIterator != particleGroup->second.particle.end();) {
 			if ((*particleIterator).lifeTime <= (*particleIterator).currentTime) {
-				particleIterator = particles.erase(particleIterator); // 生存時間が過ぎたParticleはlistから消す。戻り値が次のイテレータとなる
+				particleIterator = particleGroup->second.particle.erase(particleIterator); // 生存時間が過ぎたParticleはlistから消す。戻り値が次のイテレータとなる
 				continue;
 			}
 			// Fieldの範囲内のParticleには加速度を適用する
-			if (isAccelerationField) {
-				if (IsCollision(accelerationField.area, (*particleIterator).transform.translate)) {
-					(*particleIterator).velocity += accelerationField.acceleration * kDeltaTime;
+			if (particleGroup->second.particleFlag.isAccelerationField) {
+				if (IsCollision(particleGroup->second.accelerationField.area, (*particleIterator).transform.translate)) {
+					(*particleIterator).velocity += particleGroup->second.accelerationField.acceleration * deltaTime;
 				}
 			}
 			//(*particleIterator).currentTime = (*particleIterator).currentTime;
-			(*particleIterator).currentTime += kDeltaTime;
+			(*particleIterator).currentTime += deltaTime;
 			float alpha = 1.0f - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
-			(*particleIterator).transform.translate += (*particleIterator).velocity * kDeltaTime;
-			if (start) {
+			(*particleIterator).transform.translate += (*particleIterator).velocity * deltaTime;
+			if (particleGroup->second.particleFlag.start) {
 				// ...WorldMatrixを求めたり
 				float alpha = 1.0f - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
-				(*particleIterator).transform.translate += (*particleIterator).velocity * kDeltaTime;
-				(*particleIterator).currentTime += kDeltaTime;
+				(*particleIterator).transform.translate += (*particleIterator).velocity * deltaTime;
+				(*particleIterator).currentTime += deltaTime;
 			}
-			// CG3_01_02
-			Matrix4x4 backToFrontMatrix = MakeRotateYMatrix(std::numbers::pi_v<float>);
-			Matrix4x4 billboardMatrix = Multiply(backToFrontMatrix, cameraMatrix);
-			billboardMatrix.m[3][0] = 0.0f;
-			billboardMatrix.m[3][1] = 0.0f;
-			billboardMatrix.m[3][2] = 0.0f;
-			if (!useBillboard) {
-				billboardMatrix = MakeIdentity4x4();
-			}
+
 			Matrix4x4 scaleMatrix = MakeScaleMatrix((*particleIterator).transform.scale);
 			Matrix4x4 translateMatrix = MakeTranslateMatrix((*particleIterator).transform.translate);
 			Matrix4x4 worldMatrix = Multiply(scaleMatrix, Multiply(billboardMatrix, translateMatrix));
 			//Matrix4x4 worldMatrix = MakeAffineMatrix(particles[index].transform.scale, particles[index].transform.rotate, particles[index].transform.translate);
-			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, viewProjectionMatrix);
-			if (numInstance < kNumMaxInstance) {
-				instancingData[numInstance].WVP = worldViewProjectionMatrix;
-				instancingData[numInstance].World = worldMatrix;
-				instancingData[numInstance].color = (*particleIterator).color;
-				instancingData[numInstance].color.w = alpha;
-				++numInstance;
+			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, camera->GetViewProjectionMatrix());
+			// インスタンスが最大数を超えないようにする
+			if (particleGroup->second.numInstance < maxNumInstance) {
+				particleGroup->second.instancingData[particleGroup->second.numInstance].WVP = worldViewProjectionMatrix;
+				particleGroup->second.instancingData[particleGroup->second.numInstance].World = worldMatrix;
+				particleGroup->second.instancingData[particleGroup->second.numInstance].color = (*particleIterator).color;
+				particleGroup->second.instancingData[particleGroup->second.numInstance].color.w = alpha;
+				++particleGroup->second.numInstance;
 			}
 			++particleIterator;
 		}
@@ -129,6 +140,16 @@ void ParticleManager::Update() {
 }
 
 void ParticleManager::Draw() {
+	// RootSignatureを設定。PSOに設定しているけど別途設定が必要
+	directxBase_->GetCommandList()->SetGraphicsRootSignature(rootSignature.Get());
+	// PSOを設定
+	directxBase_->GetCommandList()->SetPipelineState(graphicsPipelineState.Get()); 
+	// 形状を設定。PSOに設定しているものとはまた別。同じものを設定すると考えておけば良い
+	directxBase_->GetCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	// VBVを設定
+	directxBase_->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferView);
+
+	// 残りのパーティクルのDraw処理
 }
 
 void ParticleManager::InitializeRandomEngine() {
@@ -242,7 +263,7 @@ void ParticleManager::CreateGraphicsPipeLineState() {
 	graphicsPipelineStateDesc.DepthStencilState = depthStencilDesc;
 	graphicsPipelineStateDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	// 実際に生成
-	HRESULT hr = directxBase_->GetDevice()->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPilelineState));
+	HRESULT hr = directxBase_->GetDevice()->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
 	assert(SUCCEEDED(hr));
 
 }
@@ -330,4 +351,13 @@ void ParticleManager::MappingVertexData() {
 	// VertexResourceにデータを書き込むためのアドレスを取得してvertexDataに割り当てる
 	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
 	std::memcpy(vertexData, modelData->vertices.data(), sizeof(VertexData) * modelData->vertices.size());
+}
+
+bool ParticleManager::IsCollision(const AABB& aabb, const Vector3& point) {
+	if ((aabb.min.x <= point.x && aabb.max.x >= point.x) &&
+		(aabb.min.y <= point.y && aabb.max.y >= point.y) &&
+		(aabb.min.z <= point.z && aabb.max.z >= point.z)) {
+		return true;
+	}
+	return false;
 }

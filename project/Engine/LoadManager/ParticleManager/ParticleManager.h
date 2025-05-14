@@ -10,10 +10,12 @@
 #include "Model.h"
 #include <dxcapi.h>
 #include <unordered_map>
+#include "AABB.h"
 
 #pragma once
 
 class DirectXBase;
+class Camera;
 
 class ParticleManager {
 private:
@@ -63,7 +65,15 @@ public:
 	/// </summary>
 	void Draw();
 
+	// Getter(Camera)
+	Camera* GetCamera() const { return camera; }
+
+	// Setter(Camera)
+	void SetCamera(Camera* camera) { camera = camera; }
+
 private:
+
+	Camera* camera = nullptr;
 	/// <summary>
 	/// ランダムエンジンの初期化
 	/// </summary>
@@ -152,7 +162,10 @@ private:
 
 
 
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPilelineState = nullptr;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState = nullptr;
+
+	// △tを定義。とりあえず60fps固定してあるが、実時間を計算して可変fpsで動かせるようにしておくとなお良い
+	const float deltaTime = 1.0f / 60.0f;
 
 	struct MaterialData {
 		std::string textureFilePath;
@@ -173,9 +186,22 @@ private:
 		Vector4 color;
 	};
 
+	struct AccelerationField {
+		Vector3 acceleration;
+		AABB area;
+	};
+
+	struct ParticleFlag
+	{
+		bool isAccelerationField;
+		bool start;
+	};
+
 	struct ParticleGroup
 	{
 		std::string particleName;
+		AccelerationField accelerationField;
+		ParticleFlag particleFlag;
 		MaterialData materialData;
 		std::list<Particle> particle;
 		D3D12_SHADER_RESOURCE_VIEW_DESC instancingSrvDesc{};
@@ -184,6 +210,10 @@ private:
 		ParticleForGPU* instancingData;
 	};
 
+	const uint32_t maxNumInstance = 100;
+
+
+	bool IsCollision(const AABB& aabb, const Vector3& point);
 	//MaterialData materialData;
 
 	std::unordered_map<std::string, ParticleGroup> particleGroups;
