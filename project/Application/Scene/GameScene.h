@@ -4,6 +4,7 @@
 #include "Camera.h"
 #include "ModelManager.h"
 #include "TextureManager.h"
+#include "ParticleManager.h"
 #include "Input.h"
 #include "WireFrameObjectBase.h"
 #include "Sprite.h"

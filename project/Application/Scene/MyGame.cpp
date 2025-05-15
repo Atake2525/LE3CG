@@ -24,6 +24,8 @@ void MyGame::Initialize() {
 
 	ModelManager::GetInstance()->Initialize(directxBase);
 
+	ParticleManager::GetInstance()->Initialize(directxBase);
+
 	Light::GetInstance()->Initialize(directxBase);
 
 	Input::GetInstance()->Initialize(winApp);
@@ -89,6 +91,8 @@ void MyGame::Finalize() {
 	TextureManager::GetInstance()->Finalize();
 
 	ModelManager::GetInstance()->Finalize();
+
+	ParticleManager::GetInstance()->Finalize();
 
 	Light::GetInstance()->Finalize();
 

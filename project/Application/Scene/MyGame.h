@@ -10,6 +10,7 @@
 #include "ModelManager.h"
 #include "WireFrameObjectBase.h"
 #include "Light.h"
+#include "ParticleManager.h"
 
 #include "algorithm"
 #include "externels/imgui/imgui.h"

@@ -17,6 +17,51 @@
 class DirectXBase;
 class Camera;
 
+struct Particle {
+	Transform transform;
+	Vector3 velocity;
+	Vector4 color;
+	float lifeTime;
+	float currentTime;
+};
+
+struct ParticleForGPU {
+	Matrix4x4 WVP;
+	Matrix4x4 World;
+	Vector4 color;
+};
+
+struct AccelerationField {
+	Vector3 acceleration;
+	AABB area;
+};
+
+struct ParticleFlag
+{
+	bool isAccelerationField;
+	bool start;
+};
+
+struct ParticleGroup
+{
+	std::string particleName;
+	AccelerationField accelerationField;
+	ParticleFlag particleFlag;
+	MaterialData materialData;
+	std::list<Particle> particles;
+	D3D12_SHADER_RESOURCE_VIEW_DESC instancingSrvDesc{};
+	Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource;
+	uint32_t numInstance;
+	ParticleForGPU* instancingData;
+};
+
+struct Emitter {
+	Transform transform; //!< エミッタのTransform
+	uint32_t count; //!< 発生数
+	float frequency; //!< 発生頻度
+	float frequencyTime; //!< 頻度用時刻
+};
+
 class ParticleManager {
 private:
 	// シングルトンパターンを適用
@@ -56,6 +101,11 @@ public:
 	void CreateParticleGroup(const std::string& name, const std::string& textureFilePath);
 
 	/// <summary>
+	/// パーティクルの発生
+	/// </summary>
+	void Emit(const std::string name, const Vector3& position, uint32_t count);
+
+	/// <summary>
 	/// 更新
 	/// </summary>
 	void Update();
@@ -69,7 +119,7 @@ public:
 	Camera* GetCamera() const { return camera; }
 
 	// Setter(Camera)
-	void SetCamera(Camera* camera) { camera = camera; }
+	void SetCamera(Camera* camera) { this->camera = camera; }
 
 private:
 
@@ -103,6 +153,12 @@ private:
 	/// </summary>
 	void MappingVertexData();
 
+	/// <summary>
+	///  マテリアル利ソールの作成
+	/// </summary>
+	void CreateMaterialResource();
+
+
 private:
 	DirectXBase* directxBase_ = nullptr;
 
@@ -114,7 +170,7 @@ private:
 	// Samplerの設定
 	D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
 	// RootParameter作成、PixelShaderのMatrixShaderのTransform
-	D3D12_ROOT_PARAMETER rootParameters[2] = {};
+	D3D12_ROOT_PARAMETER rootParameters[3] = {};
 
 	// バイナリをもとに作成
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature = nullptr;
@@ -146,7 +202,8 @@ private:
 	// 頂点バッファビューを作成する
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 	VertexData* vertexData = nullptr;
-	ModelData* modelData = nullptr;
+
+	ModelData modelData;
 
 	// バッファリソース
 	Microsoft::WRL::ComPtr<ID3D12Resource> indexResource;
@@ -172,49 +229,13 @@ private:
 		uint32_t textureIndex = 0;
 	};
 
-	struct Particle {
-		Transform transform;
-		Vector3 velocity;
-		Vector4 color;
-		float lifeTime;
-		float currentTime;
-	};
-
-	struct ParticleForGPU {
-		Matrix4x4 WVP;
-		Matrix4x4 World;
-		Vector4 color;
-	};
-
-	struct AccelerationField {
-		Vector3 acceleration;
-		AABB area;
-	};
-
-	struct ParticleFlag
-	{
-		bool isAccelerationField;
-		bool start;
-	};
-
-	struct ParticleGroup
-	{
-		std::string particleName;
-		AccelerationField accelerationField;
-		ParticleFlag particleFlag;
-		MaterialData materialData;
-		std::list<Particle> particle;
-		D3D12_SHADER_RESOURCE_VIEW_DESC instancingSrvDesc{};
-		Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource;
-		uint32_t numInstance;
-		ParticleForGPU* instancingData;
-	};
 
 	const uint32_t maxNumInstance = 100;
 
 
 	bool IsCollision(const AABB& aabb, const Vector3& point);
 	//MaterialData materialData;
+	Particle MakeNewParticle(std::mt19937& randomEngine, const Vector3& translate);
 
 	std::unordered_map<std::string, ParticleGroup> particleGroups;
 

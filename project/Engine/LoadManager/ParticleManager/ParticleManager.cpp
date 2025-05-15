@@ -32,10 +32,13 @@ void ParticleManager::Initialize(DirectXBase* directxBase) {
 	directxBase_ = directxBase;
 	InitializeRandomEngine();
 	CreateGraphicsPipeLineState();
+	InitializeVetexData();
 	CreateVertexResource();
 	CreateVertexxBufferView();
 	MappingVertexData();
-	InitializeVetexData();
+	CreateMaterialResource();
+	//  書き込むためのアドレスを取得
+	materialResource->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
 }
 
 void ParticleManager::CreateParticleGroup(const std::string& name, const std::string& textureFilePath) {
@@ -48,12 +51,12 @@ void ParticleManager::CreateParticleGroup(const std::string& name, const std::st
 
 	// パーティクルの作成
 	ParticleGroup group;
-	group.numInstance = 0;
+	group.numInstance = 1;
 	group.particleName = name;
 	group.materialData.textureFilePath = textureFilePath;
 	TextureManager::GetInstance()->LoadTexture(textureFilePath);
 	group.materialData.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(textureFilePath);
-	group.instancingResource = directxBase_->CreateBufferResource(sizeof(ParticleForGPU) * group.numInstance);
+	group.instancingResource = directxBase_->CreateBufferResource(sizeof(ParticleForGPU) * maxNumInstance);
 	group.instancingResource->Map(0, nullptr, reinterpret_cast<void**>(&group.instancingData));
 	for (uint32_t index = 0; index < group.numInstance; index++)
 	{
@@ -80,7 +83,50 @@ void ParticleManager::CreateParticleGroup(const std::string& name, const std::st
 
 	group.instancingSrvDesc = instancingSrvDesc;
 
-	particleGroups.at(name) = group;
+	particleGroups[name] = group;
+
+}
+
+Particle ParticleManager::MakeNewParticle(std::mt19937& randomEngine, const Vector3& translate) {
+	std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
+	Particle particle;
+	particle.transform.scale = { 0.5f, 0.5f, 0.5f };
+	particle.transform.rotate = { 0.0f, 3.14f, 0.0f };
+	particle.transform.translate = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+	particle.velocity = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+
+	Vector3 randomTranslate{ distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+	particle.transform.translate = translate + randomTranslate;
+
+	std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
+	particle.color = { distColor(randomEngine), distColor(randomEngine), distColor(randomEngine), 1.0f };
+
+	std::uniform_real_distribution<float> distTime(1.0f, 3.0f);
+	particle.lifeTime = distTime(randomEngine);
+	particle.currentTime = 0;
+
+	return particle;
+}
+
+void ParticleManager::Emit(const std::string name, const Vector3& position, uint32_t count) {
+	// 登録済みのパーティクルグループかチェックしてassert
+	auto it = particleGroups.find(name);
+	if (it == particleGroups.end())
+	{
+		assert(false);
+		// 読み込み済じゃないなら早期return
+		return;
+	}
+	std::list<Particle> particles;
+	//particles.transform.translate = position;
+	for (uint32_t con = 0; con < count; ++con) {
+		particles.push_back(MakeNewParticle(randomEngine, position));
+	}
+	//it->second.particle.splice(particles.end(), particles);
+	//particleGroups[name].particles.resize(count);
+	particleGroups[name].particles.splice(particles.end(), particles);
+	//it->second.particles.resize(count);
+	//it->second.particles.splice(particles.end(), particles);
 
 }
 
@@ -94,14 +140,15 @@ void ParticleManager::Update() {
 	billboardMatrix.m[3][2] = 0.0f;
 	// 一旦常にBillboardするようにしておく
 	//if (!useBillboard) {
-	billboardMatrix = MakeIdentity4x4();
+	//billboardMatrix = MakeIdentity4x4();
 	//}
 
 	for (std::unordered_map<std::string, ParticleGroup>::iterator particleGroup = particleGroups.begin(); particleGroup != particleGroups.end(); ++particleGroup)
 	{
-		for (std::list<Particle>::iterator particleIterator = particleGroup->second.particle.begin(); particleIterator != particleGroup->second.particle.end();) {
+		
+		for (std::list<Particle>::iterator particleIterator = particleGroup->second.particles.begin(); particleIterator != particleGroup->second.particles.end();) {
 			if ((*particleIterator).lifeTime <= (*particleIterator).currentTime) {
-				particleIterator = particleGroup->second.particle.erase(particleIterator); // 生存時間が過ぎたParticleはlistから消す。戻り値が次のイテレータとなる
+				particleIterator = particleGroup->second.particles.erase(particleIterator); // 生存時間が過ぎたParticleはlistから消す。戻り値が次のイテレータとなる
 				continue;
 			}
 			// Fieldの範囲内のParticleには加速度を適用する
@@ -111,15 +158,14 @@ void ParticleManager::Update() {
 				}
 			}
 			//(*particleIterator).currentTime = (*particleIterator).currentTime;
-			(*particleIterator).currentTime += deltaTime;
+			//(*particleIterator).currentTime += deltaTime;
 			float alpha = 1.0f - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
 			(*particleIterator).transform.translate += (*particleIterator).velocity * deltaTime;
-			if (particleGroup->second.particleFlag.start) {
-				// ...WorldMatrixを求めたり
-				float alpha = 1.0f - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
-				(*particleIterator).transform.translate += (*particleIterator).velocity * deltaTime;
-				(*particleIterator).currentTime += deltaTime;
-			}
+			//if (particleGroup->second.particleFlag.start) {
+			//	// ...WorldMatrixを求めたり
+			//	//alpha = 1.0f - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
+			//}
+			(*particleIterator).currentTime += deltaTime;
 
 			Matrix4x4 scaleMatrix = MakeScaleMatrix((*particleIterator).transform.scale);
 			Matrix4x4 translateMatrix = MakeTranslateMatrix((*particleIterator).transform.translate);
@@ -149,7 +195,20 @@ void ParticleManager::Draw() {
 	// VBVを設定
 	directxBase_->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferView);
 
-	// 残りのパーティクルのDraw処理
+	// 全パーティクルについての処理
+	for (std::unordered_map<std::string, ParticleGroup>::iterator particleGroup = particleGroups.begin(); particleGroup != particleGroups.end(); ++particleGroup)
+	{
+		directxBase_->GetCommandList()->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
+
+		// インスタンシングデータのSRVのDescriptorTableを設定
+		directxBase_->GetCommandList()->SetGraphicsRootDescriptorTable(1, directxBase_->GetSRVGPUDescriptorHandle(3));
+
+		// テクスチャのSRVのDescriptorTableを設定
+		directxBase_->GetCommandList()->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(particleGroup->second.materialData.textureIndex));
+
+		// DrawCall
+		directxBase_->GetCommandList()->DrawInstanced(UINT(modelData.vertices.size()), particleGroup->second.numInstance, 0, 0);
+	}
 }
 
 void ParticleManager::InitializeRandomEngine() {
@@ -160,6 +219,13 @@ void ParticleManager::InitializeRandomEngine() {
 
 void ParticleManager::CreateRootSignature() {
 	descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+	// DescriptorRange
+	D3D12_DESCRIPTOR_RANGE descriptorRange[1] = {};
+	descriptorRange[0].BaseShaderRegister = 0;  // 0から始まる
+	descriptorRange[0].NumDescriptors = 1;    // 数は1つ
+	descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV; // SRVを使う
+	descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND; // Offsetを自動計算
 
 	descriptorRangeForInstancing[0].BaseShaderRegister = 0; // 0から始める
 	descriptorRangeForInstancing[0].NumDescriptors = 1; // 数は1つ
@@ -186,6 +252,12 @@ void ParticleManager::CreateRootSignature() {
 	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;          // VertexShaderで使う
 	rootParameters[1].DescriptorTable.pDescriptorRanges = descriptorRangeForInstancing; // Tableの中身の配列を指定
 	rootParameters[1].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeForInstancing); // Tableで利用する数
+	rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE; // DescriptorTableを使う
+	rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // PixelShaderで使う
+	rootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;            // Tableの中身の配列を指定
+	rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
+	descriptionRootSignature.pParameters = rootParameters;
+	descriptionRootSignature.NumParameters = _countof(rootParameters);
 
 	// シリアライズしてバイナリにする
 	HRESULT hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
@@ -228,9 +300,9 @@ void ParticleManager::CreateRootSignature() {
 	// 三角形の中を塗りつぶす
 	rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 	// Shaderをコンパイルする
-	vertexShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Object3D.VS.hlsl", L"vs_6_0");
+	vertexShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Particle.VS.hlsl", L"vs_6_0");
 	assert(vertexShaderBlob != nullptr);
-	pixelShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Object3D.PS.hlsl", L"ps_6_0");
+	pixelShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Particle.PS.hlsl", L"ps_6_0");
 	assert(pixelShaderBlob != nullptr);
 
 	// DepthStencilStateの設定
@@ -269,14 +341,7 @@ void ParticleManager::CreateGraphicsPipeLineState() {
 }
 
 void ParticleManager::InitializeVetexData() {
-	vertexData[0].position = { 0.0f, 0.0f, 0.0f, 1.0f }; // 左上
-	vertexData[0].texcoord = { 0.0f, 0.0f };
-	vertexData[1].position = { 1.0f, 0.0f, 0.0f, 1.0f }; // 右上
-	vertexData[1].texcoord = { 1.0f, 0.0f };
-	vertexData[2].position = { 1.0f, 1.0f, 0.0f, 1.0f }; // 右下
-	vertexData[2].texcoord = { 1.0f, 1.0f };
-	vertexData[3].position = { 0.0f, 1.0f, 0.0f, 1.0f }; // 左下
-	vertexData[3].texcoord = { 0.0f, 1.0f };
+	modelData = LoadModelFile("Resources/Model/obj", "plane.obj");
 }
 
 // マルチスレッド化予定
@@ -336,13 +401,13 @@ ModelData ParticleManager::LoadModelFile(const std::string& directoryPath, const
 
 void ParticleManager::CreateVertexResource() {
 	// 頂点リソースの作成
-	vertexResource = directxBase_->CreateBufferResource(sizeof(VertexData) * modelData->vertices.size());
+	vertexResource = directxBase_->CreateBufferResource(sizeof(VertexData) * modelData.vertices.size());
 }
 
 void ParticleManager::CreateVertexxBufferView() {
 	vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
 	// 使用するリソースのサイズは頂点6つ分のサイズ
-	vertexBufferView.SizeInBytes = sizeof(VertexData) * modelData->vertices.size();
+	vertexBufferView.SizeInBytes = sizeof(VertexData) * modelData.vertices.size();
 	// 1頂点あたりのサイズ
 	vertexBufferView.StrideInBytes = sizeof(VertexData);
 }
@@ -350,7 +415,11 @@ void ParticleManager::CreateVertexxBufferView() {
 void ParticleManager::MappingVertexData() {
 	// VertexResourceにデータを書き込むためのアドレスを取得してvertexDataに割り当てる
 	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
-	std::memcpy(vertexData, modelData->vertices.data(), sizeof(VertexData) * modelData->vertices.size());
+	std::memcpy(vertexData, modelData.vertices.data(), sizeof(VertexData) * modelData.vertices.size());
+}
+
+void ParticleManager::CreateMaterialResource() {
+	materialResource = directxBase_->CreateBufferResource(sizeof(Material));
 }
 
 bool ParticleManager::IsCollision(const AABB& aabb, const Vector3& point) {

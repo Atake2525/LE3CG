@@ -5,12 +5,17 @@
 
 void GameScene::Initialize() {
 
-	ModelManager::GetInstance()->LoadModel("Resources/Model/obj", "stage.obj");
+	ModelManager::GetInstance()->LoadModel("Resources/Model/obj", "terrain.obj");
 
 	TextureManager::GetInstance()->LoadTexture("Resources/uvChecker.png");
 
+	ParticleManager::GetInstance()->CreateParticleGroup("white", "Resources/uvChecker.png");
+	ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 4);
+
 	camera = new Camera();
 	camera->SetRotate(Vector3(0.36f, 0.0f, 0.0f));
+
+	ParticleManager::GetInstance()->SetCamera(camera);
 
 	input = Input::GetInstance();
 	input->ShowMouseCursor(true);
@@ -19,7 +24,7 @@ void GameScene::Initialize() {
 
 	object3d = new Object3d();
 	object3d->Initialize();
-	object3d->SetModel("stage.obj");
+	object3d->SetModel("terrain.obj");
 
 	sprite = new Sprite();
 	sprite->Initialize("Resources/uvChecker.png");
@@ -111,6 +116,8 @@ void GameScene::Update() {
 	
 	input->Update();
 
+	ParticleManager::GetInstance()->Update();
+
 }
 
 void GameScene::Draw() {
@@ -122,6 +129,9 @@ void GameScene::Draw() {
 	Object3dBase::GetInstance()->ShaderDraw();
 
 	object3d->Draw();
+
+	ParticleManager::GetInstance()->Draw();
+
 
 }
 
