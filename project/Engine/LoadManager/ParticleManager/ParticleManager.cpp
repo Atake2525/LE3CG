@@ -39,6 +39,14 @@ void ParticleManager::Initialize(DirectXBase* directxBase) {
 	CreateMaterialResource();
 	//  書き込むためのアドレスを取得
 	materialResource->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
+
+	materialData->color = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+	materialData->uvTransform = MakeIdentity4x4();
+
+	materialData->enableLighting = false;
+	materialData->shininess = 70.0f;
+	materialData->specularColor = { 1.0f, 1.0f, 1.0f };materialData->color = { 1.0f, 1.0f, 1.0f, 1.0f };
 }
 
 void ParticleManager::CreateParticleGroup(const std::string& name, const std::string& textureFilePath) {
@@ -51,7 +59,7 @@ void ParticleManager::CreateParticleGroup(const std::string& name, const std::st
 
 	// パーティクルの作成
 	ParticleGroup group;
-	group.numInstance = 1;
+	group.numInstance = 0;
 	group.particleName = name;
 	group.materialData.textureFilePath = textureFilePath;
 	TextureManager::GetInstance()->LoadTexture(textureFilePath);
@@ -63,11 +71,14 @@ void ParticleManager::CreateParticleGroup(const std::string& name, const std::st
 		group.instancingData[index].WVP = MakeIdentity4x4();
 		group.instancingData[index].World = MakeIdentity4x4();
 	}
-	group.particleFlag.isAccelerationField = false;
+	group.particleFlag.isAccelerationField = true;
 	group.particleFlag.start = false;
 
-	group.accelerationField.acceleration = { 0.0f, 0.0f, 0.0f };
-	group.accelerationField.area = { {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
+	//group.accelerationField.acceleration = { 0.0f, 0.0f, 0.0f };
+	//group.accelerationField.area = { {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
+	group.accelerationField.acceleration = { 15.0f, 0.0f, 0.0f };
+	group.accelerationField.area.min = { -1.0f, -1.0f, -1.0f };
+	group.accelerationField.area.max = { 1.0f, 1.0f, 1.0f };
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC instancingSrvDesc{};
 	instancingSrvDesc.Format = DXGI_FORMAT_UNKNOWN;
@@ -149,6 +160,7 @@ void ParticleManager::Update() {
 		for (std::list<Particle>::iterator particleIterator = particleGroup->second.particles.begin(); particleIterator != particleGroup->second.particles.end();) {
 			if ((*particleIterator).lifeTime <= (*particleIterator).currentTime) {
 				particleIterator = particleGroup->second.particles.erase(particleIterator); // 生存時間が過ぎたParticleはlistから消す。戻り値が次のイテレータとなる
+				//particleGroup->second.numInstance--;
 				continue;
 			}
 			// Fieldの範囲内のParticleには加速度を適用する
@@ -159,13 +171,13 @@ void ParticleManager::Update() {
 			}
 			//(*particleIterator).currentTime = (*particleIterator).currentTime;
 			//(*particleIterator).currentTime += deltaTime;
+			(*particleIterator).currentTime += deltaTime;
 			float alpha = 1.0f - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
 			(*particleIterator).transform.translate += (*particleIterator).velocity * deltaTime;
 			//if (particleGroup->second.particleFlag.start) {
 			//	// ...WorldMatrixを求めたり
 			//	//alpha = 1.0f - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
 			//}
-			(*particleIterator).currentTime += deltaTime;
 
 			Matrix4x4 scaleMatrix = MakeScaleMatrix((*particleIterator).transform.scale);
 			Matrix4x4 translateMatrix = MakeTranslateMatrix((*particleIterator).transform.translate);
@@ -173,7 +185,7 @@ void ParticleManager::Update() {
 			//Matrix4x4 worldMatrix = MakeAffineMatrix(particles[index].transform.scale, particles[index].transform.rotate, particles[index].transform.translate);
 			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, camera->GetViewProjectionMatrix());
 			// インスタンスが最大数を超えないようにする
-			if (particleGroup->second.numInstance < maxNumInstance) {
+			if (particleGroup->second.numInstance < maxNumInstance && particleGroup->second.numInstance < particleGroup->second.particles.size()) {
 				particleGroup->second.instancingData[particleGroup->second.numInstance].WVP = worldViewProjectionMatrix;
 				particleGroup->second.instancingData[particleGroup->second.numInstance].World = worldMatrix;
 				particleGroup->second.instancingData[particleGroup->second.numInstance].color = (*particleIterator).color;
@@ -200,14 +212,18 @@ void ParticleManager::Draw() {
 	{
 		directxBase_->GetCommandList()->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
 
+		// wvp用のCBufferの場所を設定
+		//directxBase_->GetCommandList()->SetGraphicsRootConstantBufferView(1, particleGroup->second.instancingResource->GetGPUVirtualAddress());
+
 		// インスタンシングデータのSRVのDescriptorTableを設定
 		directxBase_->GetCommandList()->SetGraphicsRootDescriptorTable(1, directxBase_->GetSRVGPUDescriptorHandle(3));
 
 		// テクスチャのSRVのDescriptorTableを設定
-		directxBase_->GetCommandList()->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(particleGroup->second.materialData.textureIndex));
+		//directxBase_->GetCommandList()->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(particleGroup->second.materialData.textureIndex));
+		directxBase_->GetCommandList()->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(TextureManager::GetInstance()->GetTextureIndexByFilePath(modelData.material.textureFilePath)));
 
 		// DrawCall
-		directxBase_->GetCommandList()->DrawInstanced(UINT(modelData.vertices.size()), particleGroup->second.numInstance, 0, 0);
+		directxBase_->GetCommandList()->DrawInstanced(UINT(modelData.vertices.size()), particleGroup->second.particles.size(), 0, 0);
 	}
 }
 
@@ -341,7 +357,7 @@ void ParticleManager::CreateGraphicsPipeLineState() {
 }
 
 void ParticleManager::InitializeVetexData() {
-	modelData = LoadModelFile("Resources/Model/obj", "stage.obj");
+	modelData = LoadModelFile("Resources/Model/obj", "plane.obj");
 }
 
 // マルチスレッド化予定
@@ -390,6 +406,7 @@ ModelData ParticleManager::LoadModelFile(const std::string& directoryPath, const
 			aiString textureFilePath;
 			material->GetTexture(aiTextureType_DIFFUSE, 0, &textureFilePath);
 			modelData.material.textureFilePath = directoryPath + "/" + textureFilePath.C_Str();
+			TextureManager::GetInstance()->LoadTexture(modelData.material.textureFilePath);
 		}
 		else
 		{

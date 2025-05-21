@@ -66,7 +66,6 @@ void GameScene::Update() {
 	velocity = TransformNormal(velocity, camera->GetWorldMatrix());
 	if (input->PushKey(DIK_W)) {
 		cameraTransform.translate += velocity;
-		ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 4);
 	}
 	if (input->PushKey(DIK_S)) {
 		cameraTransform.translate -= velocity;
@@ -98,10 +97,10 @@ void GameScene::Update() {
 		cameraTransform.rotate.x += 0.03f;
 	}
 	if (input->PushKey(DIK_Q)) {
-		cameraTransform.rotate.z -= 0.01f;
+		ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 10);
 	}
 	if (input->PushKey(DIK_E)) {
-		cameraTransform.rotate.z += 0.01f;
+		ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 10);
 	}
 
 
