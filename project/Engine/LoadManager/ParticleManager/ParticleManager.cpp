@@ -124,7 +124,7 @@ void ParticleManager::Emit(const std::string name, const Vector3& position, uint
 	}
 	//it->second.particle.splice(particles.end(), particles);
 	//particleGroups[name].particles.resize(count);
-	particleGroups[name].particles.splice(particles.end(), particles);
+	particleGroups[name].particles = particles;
 	//it->second.particles.resize(count);
 	//it->second.particles.splice(particles.end(), particles);
 
@@ -140,7 +140,7 @@ void ParticleManager::Update() {
 	billboardMatrix.m[3][2] = 0.0f;
 	// 一旦常にBillboardするようにしておく
 	//if (!useBillboard) {
-	//billboardMatrix = MakeIdentity4x4();
+	billboardMatrix = MakeIdentity4x4();
 	//}
 
 	for (std::unordered_map<std::string, ParticleGroup>::iterator particleGroup = particleGroups.begin(); particleGroup != particleGroups.end(); ++particleGroup)
@@ -341,7 +341,7 @@ void ParticleManager::CreateGraphicsPipeLineState() {
 }
 
 void ParticleManager::InitializeVetexData() {
-	modelData = LoadModelFile("Resources/Model/obj", "plane.obj");
+	modelData = LoadModelFile("Resources/Model/obj", "stage.obj");
 }
 
 // マルチスレッド化予定
