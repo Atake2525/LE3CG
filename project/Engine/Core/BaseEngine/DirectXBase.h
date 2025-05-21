@@ -26,6 +26,13 @@ public:
 	// 描画後処理
 	void PostDraw();
 
+	// 描画前処理
+	void PreDrawRenderTexture();
+
+	// 描画後処理
+	void PostDrawRenderTexture();
+
+
 	// 終了処理
 	void Finalize();
 
@@ -169,9 +176,9 @@ private:
 	// SwapChainからResourceを引っ張ってくる
 	//std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, 2> swapChainResources;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[2];
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuHandles[2];
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvTextureHandle;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> renderTextureResources[2];
+	Microsoft::WRL::ComPtr<ID3D12Resource> renderTextureResource;
 
 	const Vector4 renderTargetClearValue{ 1.0f, 0.0f, 0.0f, 1.0f }; // 分かりやすい赤にする
 
@@ -214,4 +221,7 @@ private:
 
 	// DSV用のヒープでディスクリプタの数は1。DSVはShader内で触るものではないので、ShaderVisibleはFalse
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> dsvDescriptorHeap = nullptr;
+
+	// offScreenRendering用の3角形の変数宣言
+
 };

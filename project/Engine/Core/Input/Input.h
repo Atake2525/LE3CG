@@ -79,14 +79,14 @@ public:
 	/// </summary>
 	/// <param name="keyNumber">キー番号 例(DIK_0)</param>
 	/// <returns>押されているか</returns>
-	const bool& PushKey(BYTE keyNumber) const;
+	const bool PushKey(BYTE keyNumber) const;
 
 	/// <summary>
 	/// キーのトリガーをチェック
 	/// </summary>
 	/// <param name="keyNumber">キー番号 例(DIK_0)</param>
 	/// <returns>押したかどうか</returns>
-	const bool& TriggerKey(BYTE keyNumber) const;
+	const bool TriggerKey(BYTE keyNumber) const;
 
 
 	/// <summary>
@@ -94,7 +94,7 @@ public:
 	/// </summary>
 	/// <param name="keyNumber">キー番号 例(DIK_0)</param>
 	/// <returns>離されたか</returns>
-	const bool& ReturnKey(BYTE keyNumber) const;
+	const bool ReturnKey(BYTE keyNumber) const;
 
 	/// <summary>
 	/// マウスの押下をチェック
@@ -102,7 +102,7 @@ public:
 	/// <param name="mouseNumer">0 = 左ボタン</param>
 	/// <param name="mouseNumer">1 = 右ボタン</param>
 	/// <param name="mouseNumer">2 = マウスホイール押し込み</param>
-	const bool& PressMouse(int mouseNumer) const;
+	const bool PressMouse(int mouseNumer) const;
 
 	/// <summary>
 	/// マウスのトリガーをチェック
@@ -110,7 +110,7 @@ public:
 	/// <param name="mouseNumer">0 = 左ボタン</param>
 	/// <param name="mouseNumer">1 = 右ボタン</param>
 	/// <param name="mouseNumer">2 = マウスホイール押し込み</param>
-	const bool& TriggerMouse(int mouseNumber) const;
+	const bool TriggerMouse(int mouseNumber) const;
 
 	/// <summary>
 	/// マウスのリターンをチェック
@@ -118,13 +118,13 @@ public:
 	/// <param name="mouseNumer">0 = 左ボタン</param>
 	/// <param name="mouseNumer">1 = 右ボタン</param>
 	/// <param name="mouseNumer">2 = マウスホイール押し込み</param>
-	const bool& ReturnMouse(int mouseNumber) const;
+	const bool ReturnMouse(int mouseNumber) const;
 
 	// マウスの移動量を取得(Vector2)
-	const Vector2& GetMouseVel2() const;
+	const Vector2 GetMouseVel2() const;
 
 	// マウスの移動量を取得(Vector3)
-	const Vector3& GetMouseVel3() const;
+	const Vector3 GetMouseVel3() const;
 
 	/// <summary>
 	/// マウスカーソルの表示変更
@@ -134,46 +134,46 @@ public:
 	void ShowMouseCursor(bool flag);
 
 	// ジョイスティック左の傾きを取得(Vector2)
-	const Vector2& GetLeftJoyStickPos2() const;
+	const Vector2 GetLeftJoyStickPos2() const;
 
 	// ジョイスティック左の傾きを取得(Vector3)
-	const Vector3& GetLeftJoyStickPos3() const;
+	const Vector3 GetLeftJoyStickPos3() const;
 
 	// ジョイスティック右の傾きを取得(Vector2)
-	const Vector2& GetRightJoyStickPos2() const;
+	const Vector2 GetRightJoyStickPos2() const;
 
 	// ジョイスティック右の傾きを取得(Vector3)
-	const Vector3& GetRightJoyStickPos3() const;
+	const Vector3 GetRightJoyStickPos3() const;
 
-	const bool& IsMoveLeftJoyStick() const;
+	const bool IsMoveLeftJoyStick() const;
 
-	const bool& IsMoveRightJoyStick() const;
+	const bool IsMoveRightJoyStick() const;
 
 
 	/// <summary>
 	/// 十字キー(コントローラー)の押下をチェック
 	/// </summary>
-	const bool& PushXButton(DPad dPad) const;
+	const bool PushXButton(DPad dPad) const;
 
 	/// <summary>
 	/// 十字キー(コントローラー)のトリガーをチェック
 	/// </summary>
-	const bool& TriggerXButton(DPad dPad) const;
+	const bool TriggerXButton(DPad dPad) const;
 
 	/// <summary>
 	/// ボタン(コントローラー)の押下をチェック
 	/// </summary>
-	const bool& PushButton(Button button) const;
+	const bool PushButton(Button button) const;
 
 	/// <summary>
 	/// ボタン(コントローラー)のトリガーをチェック
 	/// </summary>
-	const bool& TriggerButton(Button button) const;
+	const bool TriggerButton(Button button) const;
 
 	/// <summary>
 	/// ボタン(コントローラー)のリターンをチェック
 	/// </summary>
-	const bool& ReturnButton(Button button) const;
+	const bool ReturnButton(Button button) const;
 
 private:
 
