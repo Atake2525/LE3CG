@@ -223,5 +223,43 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> dsvDescriptorHeap = nullptr;
 
 	// offScreenRendering用の3角形の変数宣言
+	void CreatePSO();
 
+	D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
+
+	/// Rootsignature
+	// DescriptorRange
+	D3D12_DESCRIPTOR_RANGE descriptorRange[1] = {};
+	// Samplerの設定
+	D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
+	// Resource作る度に配列を増やしす
+	// RootParameter作成、PixelShaderのMatrixShaderのTransform
+	D3D12_ROOT_PARAMETER rootParameters[3] = {};
+	// シリアライズしてバイナリにする
+	Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob = nullptr;
+	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
+	// バイナリをもとに作成
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature = nullptr;
+	// InputLayout
+	D3D12_INPUT_ELEMENT_DESC inputElementDescs[2] = {};
+	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
+	// BlendStateの設定
+	D3D12_BLEND_DESC blendDesc{};
+	// RasiterzerStateの設定
+	D3D12_RASTERIZER_DESC rasterizerDesc{};
+
+	Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob;
+
+	Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob;
+
+	// DepthStencilStateの設定
+	D3D12_DEPTH_STENCIL_DESC depthStencilDescPso{};
+
+	/// GraphicsPipeLineState
+	// PSOを作成する
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
+
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPilelineState = nullptr;
+
+	uint32_t textureIndex;
 };
