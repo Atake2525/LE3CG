@@ -9,7 +9,7 @@ void GameScene::Initialize() {
 
 	TextureManager::GetInstance()->LoadTexture("Resources/uvChecker.png");
 
-	ParticleManager::GetInstance()->CreateParticleGroup("white", "Resources/uvChecker.png");
+	ParticleManager::GetInstance()->CreateParticleGroup("white", "Resources/Model/obj/white1x1.png");
 
 	camera = new Camera();
 	camera->SetRotate(Vector3(0.36f, 0.0f, 0.0f));
@@ -96,11 +96,11 @@ void GameScene::Update() {
 	if (input->PushKey(DIK_DOWN)) {
 		cameraTransform.rotate.x += 0.03f;
 	}
-	if (input->PushKey(DIK_Q)) {
+	if (input->TriggerKey(DIK_Q)) {
 		ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 20);
 	}
-	if (input->PushKey(DIK_E)) {
-		ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 40);
+	if (input->TriggerKey(DIK_E)) {
+		ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 10);
 	}
 
 

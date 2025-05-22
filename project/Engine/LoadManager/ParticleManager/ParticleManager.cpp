@@ -127,7 +127,9 @@ Particle ParticleManager::MakeNewParticle_HitEffect(std::mt19937& randomEngine, 
 	particle.transform.scale = { 0.025f, 0.5f, 0.5f };
 	particle.transform.rotate = { 0.0f, 0.0f, distributionRotate(randomEngine)};
 	particle.transform.translate = { translate };
-	particle.velocity = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+	//particle.velocity = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+	particle.velocity = { 0.0f, 0.0f, 0.0f };
+
 
 	//Vector3 randomTranslate{ distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
 	//particle.transform.translate = translate + randomTranslate;
@@ -154,11 +156,11 @@ void ParticleManager::Emit(const std::string name, const Vector3& position, uint
 	std::list<Particle> particles;
 	//particles.transform.translate = position;
 	for (uint32_t con = 0; con < count; ++con) {
-		particles.push_back(MakeNewParticle_HitEffect(randomEngine, position));
+		particleGroups[name].particles.push_back(MakeNewParticle_HitEffect(randomEngine, position));
 	}
 	//it->second.particle.splice(particles.end(), particles);
 	//particleGroups[name].particles.resize(count);
-	particleGroups[name].particles = particles;
+	//particleGroups[name].particles.insert(particles);
 	//it->second.particles.resize(count);
 	//it->second.particles.splice(particles.end(), particles);
 
@@ -179,11 +181,11 @@ void ParticleManager::Update() {
 
 	for (std::unordered_map<std::string, ParticleGroup>::iterator particleGroup = particleGroups.begin(); particleGroup != particleGroups.end(); ++particleGroup)
 	{
-		
+		particleGroup->second.numInstance = 0;
 		for (std::list<Particle>::iterator particleIterator = particleGroup->second.particles.begin(); particleIterator != particleGroup->second.particles.end();) {
 			if ((*particleIterator).lifeTime <= (*particleIterator).currentTime) {
 				particleIterator = particleGroup->second.particles.erase(particleIterator); // 生存時間が過ぎたParticleはlistから消す。戻り値が次のイテレータとなる
-				particleGroup->second.numInstance--;
+				//particleGroup->second.numInstance--;
 				continue;
 			}
 			// Fieldの範囲内のParticleには加速度を適用する
@@ -205,8 +207,8 @@ void ParticleManager::Update() {
 			Matrix4x4 scaleMatrix = MakeScaleMatrix((*particleIterator).transform.scale);
 			Matrix4x4 translateMatrix = MakeTranslateMatrix((*particleIterator).transform.translate);
 			//billboardMatrix = MakeRotateZMatrix((*particleIterator).transform.rotate.z);
-			Matrix4x4 worldMatrix = Multiply(scaleMatrix, Multiply(billboardMatrix, translateMatrix));
-			//Matrix4x4 worldMatrix = MakeAffineMatrix((*particleIterator).transform.scale, (*particleIterator).transform.rotate, (*particleIterator).transform.translate);
+			//Matrix4x4 worldMatrix = Multiply(scaleMatrix, Multiply(billboardMatrix, translateMatrix));
+			Matrix4x4 worldMatrix = MakeAffineMatrix((*particleIterator).transform.scale, (*particleIterator).transform.rotate, (*particleIterator).transform.translate);
 			const Matrix4x4& viewProjectionMatrix = camera->GetViewProjectionMatrix();
 			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, viewProjectionMatrix);
 			// インスタンスが最大数を超えないようにする
@@ -215,11 +217,7 @@ void ParticleManager::Update() {
 				particleGroup->second.instancingData[particleGroup->second.numInstance].World = worldMatrix;
 				particleGroup->second.instancingData[particleGroup->second.numInstance].color = (*particleIterator).color;
 				particleGroup->second.instancingData[particleGroup->second.numInstance].color.w = alpha;
-				(*particleIterator).color.w = alpha;
-				if (particleGroup->second.numInstance < particleGroup->second.particles.size())
-				{
-					++particleGroup->second.numInstance;
-				}
+				++particleGroup->second.numInstance;
 			}
 			++particleIterator;
 		}
@@ -248,8 +246,8 @@ void ParticleManager::Draw() {
 		directxBase_->GetCommandList()->SetGraphicsRootDescriptorTable(1, directxBase_->GetSRVGPUDescriptorHandle(3));
 
 		// テクスチャのSRVのDescriptorTableを設定
-		//directxBase_->GetCommandList()->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(particleGroup->second.materialData.textureIndex));
-		directxBase_->GetCommandList()->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(TextureManager::GetInstance()->GetTextureIndexByFilePath(modelData.material.textureFilePath)));
+		directxBase_->GetCommandList()->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(particleGroup->second.materialData.textureIndex));
+		//directxBase_->GetCommandList()->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(TextureManager::GetInstance()->GetTextureIndexByFilePath(modelData.material.textureFilePath)));
 
 		// DrawCall
 		directxBase_->GetCommandList()->DrawInstanced(UINT(modelData.vertices.size()), particleGroup->second.numInstance, 0, 0);

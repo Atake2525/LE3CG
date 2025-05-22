@@ -43,7 +43,7 @@
 //	//const bool& CheckCollision(const AABB& a, const OBB& b);
 //};
 //
-const bool& CollisionAABB(const AABB& a, const AABB& b) {
+const bool CollisionAABB(const AABB a, const AABB b) {
 	if ((a.min.x <= b.max.x && a.max.x >= b.min.x) &&
 		(a.min.y <= b.max.y && a.max.y >= b.min.y) &&
 		(a.min.z <= b.max.z && a.max.z >= b.min.z)) {
