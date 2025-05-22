@@ -46,7 +46,7 @@ void ParticleManager::Initialize(DirectXBase* directxBase) {
 
 	materialData->enableLighting = false;
 	materialData->shininess = 70.0f;
-	materialData->specularColor = { 1.0f, 1.0f, 1.0f };materialData->color = { 1.0f, 1.0f, 1.0f, 1.0f };
+	materialData->specularColor = { 1.0f, 1.0f, 1.0f };
 }
 
 void ParticleManager::CreateParticleGroup(const std::string& name, const std::string& textureFilePath) {
@@ -119,6 +119,29 @@ Particle ParticleManager::MakeNewParticle(std::mt19937& randomEngine, const Vect
 	return particle;
 }
 
+Particle ParticleManager::MakeNewParticle_HitEffect(std::mt19937& randomEngine, const Vector3& translate)
+{
+	std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
+	std::uniform_real_distribution<float> distributionRotate(-std::numbers::pi_v<float>, std::numbers::pi_v<float>);
+	Particle particle;
+	particle.transform.scale = { 0.025f, 0.5f, 0.5f };
+	particle.transform.rotate = { 0.0f, 0.0f, distributionRotate(randomEngine)};
+	particle.transform.translate = { translate };
+	particle.velocity = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+
+	//Vector3 randomTranslate{ distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+	//particle.transform.translate = translate + randomTranslate;
+
+	//std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
+	particle.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+	//std::uniform_real_distribution<float> distTime(1.0f, 3.0f);
+	particle.lifeTime = 1.0f;
+	particle.currentTime = 0;
+
+	return particle;
+}
+
 void ParticleManager::Emit(const std::string name, const Vector3& position, uint32_t count) {
 	// 登録済みのパーティクルグループかチェックしてassert
 	auto it = particleGroups.find(name);
@@ -131,7 +154,7 @@ void ParticleManager::Emit(const std::string name, const Vector3& position, uint
 	std::list<Particle> particles;
 	//particles.transform.translate = position;
 	for (uint32_t con = 0; con < count; ++con) {
-		particles.push_back(MakeNewParticle(randomEngine, position));
+		particles.push_back(MakeNewParticle_HitEffect(randomEngine, position));
 	}
 	//it->second.particle.splice(particles.end(), particles);
 	//particleGroups[name].particles.resize(count);
@@ -160,7 +183,7 @@ void ParticleManager::Update() {
 		for (std::list<Particle>::iterator particleIterator = particleGroup->second.particles.begin(); particleIterator != particleGroup->second.particles.end();) {
 			if ((*particleIterator).lifeTime <= (*particleIterator).currentTime) {
 				particleIterator = particleGroup->second.particles.erase(particleIterator); // 生存時間が過ぎたParticleはlistから消す。戻り値が次のイテレータとなる
-				//particleGroup->second.numInstance--;
+				particleGroup->second.numInstance--;
 				continue;
 			}
 			// Fieldの範囲内のParticleには加速度を適用する
@@ -181,16 +204,22 @@ void ParticleManager::Update() {
 
 			Matrix4x4 scaleMatrix = MakeScaleMatrix((*particleIterator).transform.scale);
 			Matrix4x4 translateMatrix = MakeTranslateMatrix((*particleIterator).transform.translate);
+			//billboardMatrix = MakeRotateZMatrix((*particleIterator).transform.rotate.z);
 			Matrix4x4 worldMatrix = Multiply(scaleMatrix, Multiply(billboardMatrix, translateMatrix));
-			//Matrix4x4 worldMatrix = MakeAffineMatrix(particles[index].transform.scale, particles[index].transform.rotate, particles[index].transform.translate);
-			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, camera->GetViewProjectionMatrix());
+			//Matrix4x4 worldMatrix = MakeAffineMatrix((*particleIterator).transform.scale, (*particleIterator).transform.rotate, (*particleIterator).transform.translate);
+			const Matrix4x4& viewProjectionMatrix = camera->GetViewProjectionMatrix();
+			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, viewProjectionMatrix);
 			// インスタンスが最大数を超えないようにする
-			if (particleGroup->second.numInstance < maxNumInstance && particleGroup->second.numInstance < particleGroup->second.particles.size()) {
+			if (particleGroup->second.numInstance < maxNumInstance) {
 				particleGroup->second.instancingData[particleGroup->second.numInstance].WVP = worldViewProjectionMatrix;
 				particleGroup->second.instancingData[particleGroup->second.numInstance].World = worldMatrix;
 				particleGroup->second.instancingData[particleGroup->second.numInstance].color = (*particleIterator).color;
 				particleGroup->second.instancingData[particleGroup->second.numInstance].color.w = alpha;
-				++particleGroup->second.numInstance;
+				(*particleIterator).color.w = alpha;
+				if (particleGroup->second.numInstance < particleGroup->second.particles.size())
+				{
+					++particleGroup->second.numInstance;
+				}
 			}
 			++particleIterator;
 		}
@@ -223,7 +252,7 @@ void ParticleManager::Draw() {
 		directxBase_->GetCommandList()->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(TextureManager::GetInstance()->GetTextureIndexByFilePath(modelData.material.textureFilePath)));
 
 		// DrawCall
-		directxBase_->GetCommandList()->DrawInstanced(UINT(modelData.vertices.size()), particleGroup->second.particles.size(), 0, 0);
+		directxBase_->GetCommandList()->DrawInstanced(UINT(modelData.vertices.size()), particleGroup->second.numInstance, 0, 0);
 	}
 }
 

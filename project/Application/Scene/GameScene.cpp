@@ -97,10 +97,10 @@ void GameScene::Update() {
 		cameraTransform.rotate.x += 0.03f;
 	}
 	if (input->PushKey(DIK_Q)) {
-		ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 10);
+		ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 20);
 	}
 	if (input->PushKey(DIK_E)) {
-		ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 10);
+		ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 40);
 	}
 
 

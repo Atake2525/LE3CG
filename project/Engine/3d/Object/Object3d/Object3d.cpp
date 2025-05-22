@@ -186,7 +186,7 @@ void Object3d::SetEnableLighting(const bool& enableLighting) {
 	model_->SetEnableLighting(enableLighting);
 }
 
-const Vector3& Object3d::GetRotateInDegree() const { 
+const Vector3 Object3d::GetRotateInDegree() const { 
 	return SwapDegree(transform.rotate);
 }
 

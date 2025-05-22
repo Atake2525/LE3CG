@@ -237,6 +237,9 @@ private:
 	//MaterialData materialData;
 	Particle MakeNewParticle(std::mt19937& randomEngine, const Vector3& translate);
 
+	//MaterialData materialData;
+	Particle MakeNewParticle_HitEffect(std::mt19937& randomEngine, const Vector3& translate);
+
 	std::unordered_map<std::string, ParticleGroup> particleGroups;
 
 };

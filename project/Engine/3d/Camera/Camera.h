@@ -17,7 +17,7 @@ public:
 	void Update();
 
 	// Getter
-	const Matrix4x4& GetWorldMatrix() const { 
+	const Matrix4x4 GetWorldMatrix() const { 
 		Matrix4x4 world = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
 		return world; 
 	}
