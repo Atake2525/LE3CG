@@ -24,6 +24,7 @@ struct Material {
 	Matrix4x4 uvTransform;
 	float shininess;
 	Vector3 specularColor;
+	float alphaReference;
 };
 
 struct MaterialData {

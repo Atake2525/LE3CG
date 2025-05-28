@@ -20,7 +20,7 @@ class Camera;
 struct Particle {
 	Transform transform;
 	Vector3 velocity;
-	float rotateZVelocity;
+	Vector3 rotateVelocity;
 	Vector4 color;
 	float lifeTime;
 	float currentTime;
@@ -42,6 +42,7 @@ struct ParticleFlag
 	bool isAccelerationField;
 	bool start;
 };
+
 
 struct ParticleGroup
 {
@@ -219,6 +220,11 @@ private:
 	D3D12_INDEX_BUFFER_VIEW indexbufferView;
 
 
+	// アルファの閾値のリソース
+	//Microsoft::WRL::ComPtr<ID3D12Resource> alphaReferenceResource;
+
+	//AlphaReference alphaReference;
+
 
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState = nullptr;
 
@@ -240,6 +246,8 @@ private:
 
 	//MaterialData materialData;
 	Particle MakeNewParticle_HitEffect(std::mt19937& randomEngine, const Vector3& translate);
+
+	Particle MakeNewParticle_CircleZone(std::mt19937& randomEngine, const Vector3& translate);
 
 	std::unordered_map<std::string, ParticleGroup> particleGroups;
 
