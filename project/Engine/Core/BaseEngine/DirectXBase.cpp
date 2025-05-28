@@ -331,21 +331,21 @@ void DirectXBase::PreDraw() {
 	}
 
 	//// これから書き込むバックバッファのインデックスを取得
-	//backBufferIndex = swapChain->GetCurrentBackBufferIndex();
+	backBufferIndex = swapChain->GetCurrentBackBufferIndex();
 
 	//// TransitionのBarrierの設定
-	//// 今回のバリアはTransition
-	//barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	//// Noneにしておく
-	//barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	//// バリアを張る対象のリソース。現在のバックバッファに対して行う
-	//barrier.Transition.pResource = swapChainResources[backBufferIndex].Get();
-	//// 遷移前(現在)のRecourceState
-	//barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-	//// 遷移後のResourceState
-	//barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	//// TransitionBarrierを張る
-	//commandList->ResourceBarrier(1, &barrier);
+	// 今回のバリアはTransition
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	// Noneにしておく
+	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	// バリアを張る対象のリソース。現在のバックバッファに対して行う
+	barrier.Transition.pResource = swapChainResources[backBufferIndex].Get();
+	// 遷移前(現在)のRecourceState
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+	// 遷移後のResourceState
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	// TransitionBarrierを張る
+	commandList->ResourceBarrier(1, &barrier);
 
 
 	// swapChainに描画させる前にRenderTargetで一度描画する
@@ -425,17 +425,17 @@ void DirectXBase::PreDrawRenderTexture() {
 
 	// TransitionのBarrierの設定
 	// 今回のバリアはTransition
-	//barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	//// Noneにしておく
-	//barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	//// バリアを張る対象のリソース。現在のバックバッファに対して行う
-	//barrier.Transition.pResource = renderTextureResource.Get();
-	//// 遷移前(現在)のRecourceState
-	//barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-	//// 遷移後のResourceState
-	//barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	//// TransitionBarrierを張る
-	//commandList->ResourceBarrier(1, &barrier);
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	// Noneにしておく
+	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	// バリアを張る対象のリソース。現在のバックバッファに対して行う
+	barrier.Transition.pResource = renderTextureResource.Get();
+	// 遷移前(現在)のRecourceState
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+	// 遷移後のResourceState
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	// TransitionBarrierを張る
+	commandList->ResourceBarrier(1, &barrier);
 
 	// swapChainに描画させる前にRenderTargetで一度描画する
 	// 方法が分からない
@@ -464,19 +464,19 @@ void DirectXBase::PostDrawRenderTexture() {
 	// これから書き込むバックバッファのインデックスを取得
 	backBufferIndex = swapChain->GetCurrentBackBufferIndex();
 
-	// TransitionのBarrierの設定
-	// 今回のバリアはTransition
-	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	// Noneにしておく
-	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	// バリアを張る対象のリソース。現在のバックバッファに対して行う
-	barrier.Transition.pResource = renderTextureResource.Get();
-	// 遷移前(現在)のRecourceState
-	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-	// 遷移後のResourceState
-	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	// TransitionBarrierを張る
-	commandList->ResourceBarrier(1, &barrier);
+	//// TransitionのBarrierの設定
+	//// 今回のバリアはTransition
+	//barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	//// Noneにしておく
+	//barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	//// バリアを張る対象のリソース。現在のバックバッファに対して行う
+	//barrier.Transition.pResource = renderTextureResource.Get();
+	//// 遷移前(現在)のRecourceState
+	//barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+	//// 遷移後のResourceState
+	//barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	//// TransitionBarrierを張る
+	//commandList->ResourceBarrier(1, &barrier);
 	// 今回はRenderTargetからPresentにする
 	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
@@ -488,13 +488,20 @@ void DirectXBase::PostDrawRenderTexture() {
 	TextureManager::GetInstance()->LoadTexture("Resources/Debug/white1x1.png");
 	textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath("Resources/Debug/white1x1.png");
 	commandList->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(textureIndex));
-	commandList->DrawInstanced(3, 1, 0, 0);
 
 	// 今回はRenderTargetからPresentにする
 	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	// TransitionBarrierを張る
 	commandList->ResourceBarrier(1, &barrier);
+
+	commandList->DrawInstanced(3, 1, 0, 0);
+
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+	// TransitionBarrierを張る
+	commandList->ResourceBarrier(1, &barrier);
+
 	// 今回はRenderTargetからPresentにする
 	//barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	//barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
