@@ -9,10 +9,11 @@ void GameScene::Initialize() {
 
 	TextureManager::GetInstance()->LoadTexture("Resources/uvChecker.png");
 
-	ParticleManager::GetInstance()->CreateParticleGroup("white", "Resources/Model/obj/white1x1.png");
+	ParticleManager::GetInstance()->CreateParticleGroup("white", "Resources/Model/obj/gradationLine.png");
 
 	camera = new Camera();
 	camera->SetRotate(Vector3(0.36f, 0.0f, 0.0f));
+	camera->SetTranslate({ 0.0f, 5.0f, -10.0f });
 
 	ParticleManager::GetInstance()->SetCamera(camera);
 
@@ -29,6 +30,8 @@ void GameScene::Initialize() {
 	sprite->Initialize("Resources/uvChecker.png");
 
 	cameraTransform.scale = { 1.0f, 1.0f, 1.0f };
+	cameraTransform.rotate = { 0.36f, 0.0f, 0.0f };
+	cameraTransform.translate = { 0.0f, 5.0f, -10.0f };
 
 	modelTransform = object3d->GetTransform();
 }
@@ -97,10 +100,10 @@ void GameScene::Update() {
 		cameraTransform.rotate.x += 0.03f;
 	}
 	if (input->TriggerKey(DIK_Q)) {
-		ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 20);
+		ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 1);
 	}
 	if (input->TriggerKey(DIK_E)) {
-		ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 10);
+		ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 5);
 	}
 
 

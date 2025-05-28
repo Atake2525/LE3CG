@@ -20,6 +20,7 @@ class Camera;
 struct Particle {
 	Transform transform;
 	Vector3 velocity;
+	float rotateZVelocity;
 	Vector4 color;
 	float lifeTime;
 	float currentTime;
