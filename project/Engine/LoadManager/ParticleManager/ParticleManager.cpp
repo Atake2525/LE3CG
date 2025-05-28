@@ -101,8 +101,8 @@ void ParticleManager::CreateParticleGroup(const std::string& name, const std::st
 Particle ParticleManager::MakeNewParticle(std::mt19937& randomEngine, const Vector3& translate) {
 	std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
 	Particle particle;
-	particle.transform.scale = { 0.5f, 0.5f, 0.5f };
-	particle.transform.rotate = { 0.0f, 3.14f, 0.0f };
+	particle.transform.scale = { 1.0f, 1.0f, 1.0f };
+	particle.transform.rotate = { 0.0f, 0.0f, 0.0f };
 	particle.transform.translate = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
 	particle.velocity = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
 
@@ -156,7 +156,7 @@ void ParticleManager::Emit(const std::string name, const Vector3& position, uint
 	std::list<Particle> particles;
 	//particles.transform.translate = position;
 	for (uint32_t con = 0; con < count; ++con) {
-		particleGroups[name].particles.push_back(MakeNewParticle_HitEffect(randomEngine, position));
+		particleGroups[name].particles.push_back(MakeNewParticle(randomEngine, position));
 	}
 	//it->second.particle.splice(particles.end(), particles);
 	//particleGroups[name].particles.resize(count);
@@ -189,11 +189,11 @@ void ParticleManager::Update() {
 				continue;
 			}
 			// Fieldの範囲内のParticleには加速度を適用する
-			if (particleGroup->second.particleFlag.isAccelerationField) {
-				if (IsCollision(particleGroup->second.accelerationField.area, (*particleIterator).transform.translate)) {
-					(*particleIterator).velocity += particleGroup->second.accelerationField.acceleration * deltaTime;
-				}
+			//if (particleGroup->second.particleFlag.isAccelerationField) {
+			if (IsCollision(particleGroup->second.accelerationField.area, (*particleIterator).transform.translate)) {
+				(*particleIterator).velocity += particleGroup->second.accelerationField.acceleration * deltaTime;
 			}
+			//}
 			//(*particleIterator).currentTime = (*particleIterator).currentTime;
 			//(*particleIterator).currentTime += deltaTime;
 			(*particleIterator).currentTime += deltaTime;
@@ -278,7 +278,8 @@ void ParticleManager::CreateRootSignature() {
 	// Samplerの設定
 	staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;   // バイナリフィルタ
 	staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP; // 0～1の範囲外をリピート
-	staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	//staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 	staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 	staticSamplers[0].ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;     // 比較しない
 	staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;                       // ありったけのMipmapを使う
@@ -384,7 +385,32 @@ void ParticleManager::CreateGraphicsPipeLineState() {
 }
 
 void ParticleManager::InitializeVetexData() {
-	modelData = LoadModelFile("Resources/Model/obj", "plane.obj");
+	//modelData = LoadModelFile("Resources/Model/obj", "plane.obj");
+	const uint32_t ringDivide = 32;
+	const float outerRadius = 1.0f;
+	const float innerRadius = 0.2f;
+	float radianPerDivide = 2.0f * std::numbers::pi_v<float> / float(ringDivide);
+
+	for (uint32_t index = 0; index < ringDivide; index++)
+	{
+		float sin = std::sin(index * radianPerDivide);
+		float cos = std::cos(index * radianPerDivide);
+		float sinNext = std::sin((index * 1) * radianPerDivide);
+		float cosNext = std::cos((index * 1) * radianPerDivide);
+		float u = float(index) / float(ringDivide);
+		float uNext = float(index * 1) * float(ringDivide);
+		VertexData vertexData = { {-sin * outerRadius, cos * outerRadius, 0.0f, 1.0f}, {u, 0.0f}, {0.0f, 0.0f, 1.0f} };
+		modelData.vertices.push_back(vertexData);
+		vertexData = { {-sinNext * outerRadius, cosNext * outerRadius, 0.0f, 1.0f}, {uNext, 0.0f}, { 0.0f, 0.0f, 1.0f } };
+		modelData.vertices.push_back(vertexData);
+		vertexData = { {-sin * innerRadius, cos * innerRadius, 0.0f, 1.0f}, {u, 1.0f}, {0.0f, 0.0f, 1.0f} };
+		modelData.vertices.push_back(vertexData);
+		vertexData = { {-sinNext * innerRadius, cosNext * innerRadius, 0.0f, 1.0f}, {uNext, 1.0f}, {0.0f, 0.0f, 1.0f} };
+		modelData.vertices.push_back(vertexData);
+
+
+	}
+	modelData.material.textureFilePath = "Resources/Debug/white1x1.png";
 }
 
 // マルチスレッド化予定
