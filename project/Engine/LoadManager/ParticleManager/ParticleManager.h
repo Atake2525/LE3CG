@@ -43,6 +43,11 @@ struct ParticleFlag
 	bool start;
 };
 
+struct AlphaReference
+{
+	float alphaReference;
+};
+
 
 struct ParticleGroup
 {
@@ -55,6 +60,7 @@ struct ParticleGroup
 	Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource;
 	uint32_t numInstance;
 	ParticleForGPU* instancingData;
+	ModelData modelData;
 };
 
 struct Emitter {
@@ -62,6 +68,20 @@ struct Emitter {
 	uint32_t count; //!< 発生数
 	float frequency; //!< 発生頻度
 	float frequencyTime; //!< 頻度用時刻
+};
+
+enum ParticleType
+{
+	Plane,
+	Ring,
+	Cylinder,
+};
+
+enum ParticleStyle
+{
+	HitEffect,
+	Slash,
+	CircleZone,
 };
 
 class ParticleManager {
@@ -100,12 +120,12 @@ public:
 	/// </summary>
 	/// <param name="name">名前</param>
 	/// <param name="textureFilePath">テクスチャ名</param>
-	void CreateParticleGroup(const std::string& name, const std::string& textureFilePath);
+	void CreateParticleGroup(const std::string& name, const std::string& textureFilePath, const ParticleType type = ParticleType::Plane);
 
 	/// <summary>
 	/// パーティクルの発生
 	/// </summary>
-	void Emit(const std::string name, const Vector3& position, uint32_t count);
+	void Emit(const std::string name, const Vector3& position, uint32_t count, const ParticleStyle style = ParticleStyle::HitEffect);
 
 	/// <summary>
 	/// 更新
@@ -161,6 +181,11 @@ private:
 	void CreateMaterialResource();
 
 
+	void CreatePlaneVertexData();
+	void CreateRingVertexData();
+	void CreateCylinderVertexData();
+
+
 private:
 	DirectXBase* directxBase_ = nullptr;
 
@@ -172,7 +197,7 @@ private:
 	// Samplerの設定
 	D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
 	// RootParameter作成、PixelShaderのMatrixShaderのTransform
-	D3D12_ROOT_PARAMETER rootParameters[3] = {};
+	D3D12_ROOT_PARAMETER rootParameters[4] = {};
 
 	// バイナリをもとに作成
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature = nullptr;
@@ -184,6 +209,9 @@ private:
 
 	Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob;
 
+	Microsoft::WRL::ComPtr<ID3D12Resource> alphaReferenceResource = nullptr;
+
+	AlphaReference alpha;
 
 	// InputLayout
 	D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
@@ -206,6 +234,9 @@ private:
 	VertexData* vertexData = nullptr;
 
 	ModelData modelData;
+	ModelData planeModelData;
+	ModelData ringModelData;
+	ModelData cylinderModelData;
 
 	// バッファリソース
 	Microsoft::WRL::ComPtr<ID3D12Resource> indexResource;
@@ -246,6 +277,8 @@ private:
 
 	//MaterialData materialData;
 	Particle MakeNewParticle_HitEffect(std::mt19937& randomEngine, const Vector3& translate);
+
+	Particle MakeNewParticle_Slash(std::mt19937& randomEngine, const Vector3& translate);
 
 	Particle MakeNewParticle_CircleZone(std::mt19937& randomEngine, const Vector3& translate);
 

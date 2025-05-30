@@ -9,7 +9,8 @@ void GameScene::Initialize() {
 
 	TextureManager::GetInstance()->LoadTexture("Resources/uvChecker.png");
 
-	ParticleManager::GetInstance()->CreateParticleGroup("white", "Resources/Model/obj/gradationLine.png");
+	ParticleManager::GetInstance()->CreateParticleGroup("hit", "Resources/Model/obj/Circle2.png", ParticleType::Ring);
+	ParticleManager::GetInstance()->CreateParticleGroup("slash", "Resources/Model/obj/Circle2.png", ParticleType::Ring);
 
 	camera = new Camera();
 	camera->SetRotate(Vector3(0.36f, 0.0f, 0.0f));
@@ -38,7 +39,7 @@ void GameScene::Initialize() {
 
 void GameScene::Update() {
 
-	ImGui::Begin("State");
+	/*ImGui::Begin("State");
 	if (ImGui::TreeNode("Camera")) {
 		ImGui::DragFloat3("Tranlate", &cameraTransform.translate.x, 0.1f);
 		ImGui::DragFloat3("Rotate", &cameraTransform.rotate.x, 0.1f);
@@ -58,7 +59,7 @@ void GameScene::Update() {
 		ImGui::Checkbox("EnableLihting", &enableLighting);
 		ImGui::TreePop();
 	}
-	ImGui::End();
+	ImGui::End();*/
 
 	if (input->TriggerKey(DIK_ESCAPE))
 	{
@@ -100,10 +101,10 @@ void GameScene::Update() {
 		cameraTransform.rotate.x += 0.03f;
 	}
 	if (input->TriggerKey(DIK_Q)) {
-		ParticleManager::GetInstance()->Emit("white", { 0.0f, 0.0f, 0.0f }, 1);
+		ParticleManager::GetInstance()->Emit("slash", { 0.0f, 2.0f, 0.0f }, 10, ParticleStyle::Slash);
 	}
 	if (input->TriggerKey(DIK_E)) {
-		ParticleManager::GetInstance()->Emit("white", { 0.0f, 2.0f, 0.0f }, 5);
+		ParticleManager::GetInstance()->Emit("slash", { 0.0f, 2.0f, 0.0f }, 20, ParticleStyle::HitEffect);
 	}
 
 

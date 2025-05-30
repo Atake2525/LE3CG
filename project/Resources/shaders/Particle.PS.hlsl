@@ -12,9 +12,15 @@ struct Material
     float32_t4 color;
     int32_t enableLighting;
     float32_t4x4 uvTransform;
-    float32_t alphaReference;
+ 
 };
 ConstantBuffer<Material> gMaterial : register(b0);
+
+struct AlphaReference
+{
+    float32_t alphaReference;
+};
+ConstantBuffer<AlphaReference> alphaReference : register(b1);
 struct PixelShaderOutput
 {
     float32_t4 color : SV_TARGET0;
@@ -32,7 +38,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     float32_t4 transformedUV = mul(float32_t4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform);
     float32_t4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
     output.color = gMaterial.color * textureColor * input.color;
-    if (output.color.a == gMaterial.alphaReference)
+    if (output.color.a <= alphaReference.alphaReference)
     {
         discard;
     }
