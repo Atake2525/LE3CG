@@ -11,6 +11,8 @@ struct ParticleForGPU
 };
 StructuredBuffer<ParticleForGPU> gParticle : register(t0);
 
+
+
 //struct VertexShaderOutput{
 //    float32_t4 position : SV_POSITION;
 //};
@@ -26,7 +28,7 @@ VertexShaderOutput main(VertexShaderInput input, uint32_t instanceId : SV_Instan
 {
     VertexShaderOutput output;
     output.position = mul(input.position, gParticle[instanceId].WVP);
-    output.texcoord = input.texcoord;
+    output.texcoord = 1.0f - input.texcoord;
     output.color = gParticle[instanceId].color;
     return output;
 }

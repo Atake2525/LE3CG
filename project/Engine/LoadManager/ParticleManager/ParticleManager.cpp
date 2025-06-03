@@ -10,6 +10,9 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+#include "externels/imgui/imgui.h"
+#include "externels/imgui/imgui_impl_dx12.h"
+#include "externels/imgui/imgui_impl_win32.h"
 
 using namespace Logger;
 
@@ -47,9 +50,16 @@ void ParticleManager::Initialize(DirectXBase* directxBase) {
 	materialData->enableLighting = false;
 	materialData->shininess = 70.0f;
 	materialData->specularColor = { 1.0f, 1.0f, 1.0f };
+	materialData->alphaReference = 0.0f;
+
+	alphaReferenceResource = directxBase_->CreateBufferResource(sizeof(AlphaReference));
+
+	alphaReferenceResource->Map(0, nullptr, reinterpret_cast<void**>(&alpha));
+
+	alpha.alphaReference = 0.0f;
 }
 
-void ParticleManager::CreateParticleGroup(const std::string& name, const std::string& textureFilePath) {
+void ParticleManager::CreateParticleGroup(const std::string& name, const std::string& textureFilePath, const ParticleType type) {
 	auto it = particleGroups.find(name);
 	if (it != particleGroups.end())
 	{
@@ -73,6 +83,19 @@ void ParticleManager::CreateParticleGroup(const std::string& name, const std::st
 	}
 	group.particleFlag.isAccelerationField = true;
 	group.particleFlag.start = false;
+
+	switch (type)
+	{
+	case Plane:
+		group.modelData = planeModelData;
+		break;
+	case Ring:
+		group.modelData = ringModelData;
+		break;
+	case Cylinder:
+		group.modelData = cylinderModelData;
+		break;
+	}
 
 	//group.accelerationField.acceleration = { 0.0f, 0.0f, 0.0f };
 	//group.accelerationField.area = { {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
@@ -105,7 +128,7 @@ Particle ParticleManager::MakeNewParticle(std::mt19937& randomEngine, const Vect
 	particle.transform.rotate = { 0.0f, 0.0f, 0.0f };
 	particle.transform.translate = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
 	particle.velocity = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
-	particle.rotateZVelocity = distribution(randomEngine);
+	particle.rotateVelocity = { 0.0f, 0.0f, distribution(randomEngine) };
 
 	Vector3 randomTranslate{ distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
 	particle.transform.translate = translate + randomTranslate;
@@ -120,17 +143,16 @@ Particle ParticleManager::MakeNewParticle(std::mt19937& randomEngine, const Vect
 	return particle;
 }
 
-Particle ParticleManager::MakeNewParticle_HitEffect(std::mt19937& randomEngine, const Vector3& translate)
-{
+Particle ParticleManager::MakeNewParticle_HitEffect(std::mt19937& randomEngine, const Vector3& translate) {
 	std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
 	std::uniform_real_distribution<float> distributionRotate(-std::numbers::pi_v<float>, std::numbers::pi_v<float>);
 	Particle particle;
-	particle.transform.scale = { 1.0f, 1.0f, 1.0f };
+	particle.transform.scale = { 0.05f, 1.0f, 0.01f };
 	particle.transform.rotate = { distributionRotate(randomEngine), distributionRotate(randomEngine), distributionRotate(randomEngine) };
 	particle.transform.translate = { translate };
 	//particle.velocity = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
 	particle.velocity = { 0.0f, 0.0f, 0.0f };
-	particle.rotateZVelocity = 0.0f;
+	particle.rotateVelocity = { 0.0f, 0.0f, 0.0f };
 
 
 	//Vector3 randomTranslate{ distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
@@ -146,7 +168,56 @@ Particle ParticleManager::MakeNewParticle_HitEffect(std::mt19937& randomEngine, 
 	return particle;
 }
 
-void ParticleManager::Emit(const std::string name, const Vector3& position, uint32_t count) {
+Particle ParticleManager::MakeNewParticle_Slash(std::mt19937& randomEngine, const Vector3& translate) {
+	std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
+	std::uniform_real_distribution<float> distributionRotate(-std::numbers::pi_v<float>, std::numbers::pi_v<float>);
+	Particle particle;
+	particle.transform.scale = { 1.0f, 1.0f, 1.0f };
+	particle.transform.rotate = { distributionRotate(randomEngine), distributionRotate(randomEngine), distributionRotate(randomEngine) };
+	particle.transform.translate = { translate };
+	//particle.velocity = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+	particle.velocity = { 0.0f, 0.0f, 0.0f };
+	particle.rotateVelocity = { 0.0f, 0.0f, 0.0f };
+
+
+	//Vector3 randomTranslate{ distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+	//particle.transform.translate = translate + randomTranslate;
+
+	//std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
+	particle.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+	//std::uniform_real_distribution<float> distTime(1.0f, 3.0f);
+	particle.lifeTime = 1.0f;
+	particle.currentTime = 0;
+
+	return particle;
+}
+
+Particle ParticleManager::MakeNewParticle_CircleZone(std::mt19937& randomEngine, const Vector3& translate) {
+
+	std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
+	Particle particle;
+	particle.transform.scale = { 1.0f, 1.0f, 1.0f };
+	particle.transform.rotate = { 0.0f, 0.0f, 0.0f };
+	particle.transform.translate = translate;
+	particle.velocity = { 0.0f, 0.0f, 0.0f };
+	particle.rotateVelocity = { 0.0f, 0.1f, 0.0f };
+	particle.color = { 0.1f, 0.1f, 1.0f, 0.8f };
+
+	//Vector3 randomTranslate{ distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+	//particle.transform.translate = translate + randomTranslate;
+
+	//std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
+	//particle.color = { distColor(randomEngine), distColor(randomEngine), distColor(randomEngine), 1.0f };
+
+	//std::uniform_real_distribution<float> distTime(1.0f, 3.0f);
+	particle.lifeTime = 100.0f;
+	particle.currentTime = 0;
+
+	return particle;
+}
+
+void ParticleManager::Emit(const std::string name, const Vector3& position, uint32_t count, const ParticleStyle style) {
 	// 登録済みのパーティクルグループかチェックしてassert
 	auto it = particleGroups.find(name);
 	if (it == particleGroups.end())
@@ -157,9 +228,27 @@ void ParticleManager::Emit(const std::string name, const Vector3& position, uint
 	}
 	std::list<Particle> particles;
 	//particles.transform.translate = position;
-	for (uint32_t con = 0; con < count; ++con) {
-		particleGroups[name].particles.push_back(MakeNewParticle_HitEffect(randomEngine, position));
+	switch (style)
+	{
+	case HitEffect:
+		for (uint32_t con = 0; con < count; ++con) {
+			particleGroups[name].particles.push_back(MakeNewParticle_HitEffect(randomEngine, position));
+		}
+		break;
+	case Slash:
+		for (uint32_t con = 0; con < count; ++con) {
+			particleGroups[name].particles.push_back(MakeNewParticle_Slash(randomEngine, position));
+		}
+		break;
+	case CircleZone:
+		for (uint32_t con = 0; con < count; ++con) {
+			particleGroups[name].particles.push_back(MakeNewParticle_CircleZone(randomEngine, position));
+		}
+		break;
+	default:
+		break;
 	}
+
 	//it->second.particle.splice(particles.end(), particles);
 	//particleGroups[name].particles.resize(count);
 	//particleGroups[name].particles.insert(particles);
@@ -170,6 +259,10 @@ void ParticleManager::Emit(const std::string name, const Vector3& position, uint
 
 void ParticleManager::Update() {
 	
+	/*ImGui::Begin("alpha");
+	ImGui::SliderFloat("alpha", &alpha.alphaReference, 0.0f, 1.0f);
+	ImGui::End();*/
+
 	// CG3_01_02
 	Matrix4x4 backToFrontMatrix = MakeRotateYMatrix(std::numbers::pi_v<float>);
 	Matrix4x4 billboardMatrix = Multiply(backToFrontMatrix, camera->GetWorldMatrix());
@@ -201,7 +294,7 @@ void ParticleManager::Update() {
 			(*particleIterator).currentTime += deltaTime;
 			float alpha = 1.0f - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
 			(*particleIterator).transform.translate += (*particleIterator).velocity * deltaTime;
-			(*particleIterator).transform.rotate.z += (*particleIterator).rotateZVelocity * deltaTime;
+			(*particleIterator).transform.rotate += (*particleIterator).rotateVelocity * deltaTime;
 			//if (particleGroup->second.particleFlag.start) {
 			//	// ...WorldMatrixを求めたり
 			//	//alpha = 1.0f - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
@@ -241,7 +334,11 @@ void ParticleManager::Draw() {
 	// 全パーティクルについての処理
 	for (std::unordered_map<std::string, ParticleGroup>::iterator particleGroup = particleGroups.begin(); particleGroup != particleGroups.end(); ++particleGroup)
 	{
+		modelData.vertices = particleGroup->second.modelData.vertices;
+
 		directxBase_->GetCommandList()->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
+
+		directxBase_->GetCommandList()->SetGraphicsRootConstantBufferView(3, alphaReferenceResource->GetGPUVirtualAddress());
 
 		// wvp用のCBufferの場所を設定
 		//directxBase_->GetCommandList()->SetGraphicsRootConstantBufferView(1, particleGroup->second.instancingResource->GetGPUVirtualAddress());
@@ -304,6 +401,12 @@ void ParticleManager::CreateRootSignature() {
 	rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // PixelShaderで使う
 	rootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;            // Tableの中身の配列を指定
 	rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
+	rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;              // CBVを使う
+	rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;           // PixelShaderで使う
+	rootParameters[3].Descriptor.ShaderRegister = 1;                              // レジスタ番号0とバインド
+	//rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;              // CBVを使う
+	//rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;           // PixelShaderで使う
+	//rootParameters[3].Descriptor.ShaderRegister = 1;                              // レジスタ番号1とバインド
 	descriptionRootSignature.pParameters = rootParameters;
 	descriptionRootSignature.NumParameters = _countof(rootParameters);
 
@@ -357,7 +460,7 @@ void ParticleManager::CreateRootSignature() {
 	// Depthの機能を有効化する
 	depthStencilDesc.DepthEnable = true;
 	// 書き込みします
-	depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
 	// 比較関数はLessEqual。つまり、近ければ描画される
 	depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 }
@@ -389,36 +492,12 @@ void ParticleManager::CreateGraphicsPipeLineState() {
 }
 
 void ParticleManager::InitializeVetexData() {
+
 	//modelData = LoadModelFile("Resources/Model/obj", "plane.obj");
-	const uint32_t ringDivide = 32;
-	const float outerRadius = 1.0f;
-	const float innerRadius = 0.2f;
-	const float radianPerDivide = 2.0f * std::numbers::pi_v<float> / float(ringDivide);
+	CreatePlaneVertexData();
+	CreateRingVertexData();
+	CreateCylinderVertexData();
 
-	for (uint32_t index = 0; index < ringDivide; ++index)
-	{
-		float sin = std::sin(index * radianPerDivide);
-		float cos = std::cos(index * radianPerDivide);
-		float sinNext = std::sin((index + 1) * radianPerDivide);
-		float cosNext = std::cos((index + 1) * radianPerDivide);
-		float u = float(index) / float(ringDivide);
-		float uNext = float(index + 1) / float(ringDivide);
-		VertexData vertexData;
-		vertexData = { {-sin * outerRadius, cos * outerRadius, 0.0f, 1.0f},			{u, 0.0f},		{0.0f, 0.0f, 1.0f} };
-		modelData.vertices.push_back(vertexData);
-		vertexData = { {-sinNext * outerRadius, cosNext * outerRadius, 0.0f, 1.0f}, {uNext, 0.0f},  {0.0f, 0.0f, 1.0f} };
-		modelData.vertices.push_back(vertexData);
-		vertexData = { {-sin * innerRadius, cos * innerRadius, 0.0f, 1.0f},		    {u, 1.0f},		{0.0f, 0.0f, 1.0f} };
-		modelData.vertices.push_back(vertexData);
-		vertexData = { {-sinNext * innerRadius, cosNext * innerRadius, 0.0f, 1.0f}, {uNext, 1.0f},  {0.0f, 0.0f, 1.0f} };
-		modelData.vertices.push_back(vertexData);
-		vertexData = { {-sin * innerRadius, cos * innerRadius, 0.0f, 1.0f},		    {u, 1.0f},		{0.0f, 0.0f, 1.0f} };
-		modelData.vertices.push_back(vertexData);
-		vertexData = { {-sinNext * outerRadius, cosNext * outerRadius, 0.0f, 1.0f}, {uNext, 0.0f},  {0.0f, 0.0f, 1.0f} };
-		modelData.vertices.push_back(vertexData);
-
-
-	}
 	modelData.material.textureFilePath = "Resources/Debug/white1x1.png";
 	TextureManager::GetInstance()->LoadTexture(modelData.material.textureFilePath);
 	modelData.material.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(modelData.material.textureFilePath);
@@ -501,6 +580,122 @@ void ParticleManager::MappingVertexData() {
 
 void ParticleManager::CreateMaterialResource() {
 	materialResource = directxBase_->CreateBufferResource(sizeof(Material));
+}
+
+void ParticleManager::CreatePlaneVertexData() {
+	VertexData vData;
+
+	vData = {
+		{-1.0f, 1.0f, 0.0f, 1.0f},
+		{0.0f, 1.0f},
+		{0.0f, 0.0f, 1.0f}
+	};
+	planeModelData.vertices.push_back(vData);
+
+	vData = {
+		{1.0f, 1.0f, 0.0f, 1.0f},
+		{1.0f, 1.0f},
+		{0.0f, 0.0f, 1.0f}
+	};
+
+	planeModelData.vertices.push_back(vData);
+
+	vData = {
+		{-1.0f, -1.0f, 0.0f, 1.0f},
+		{0.0f, 0.0f},
+		{0.0f, 0.0f, 1.0f}
+	};
+
+	planeModelData.vertices.push_back(vData);
+
+	vData = {
+		{1.0f, 1.0f, 0.0f, 1.0f},
+		{1.0f, 1.0f},
+		{0.0f, 0.0f, 1.0f}
+	};
+
+	planeModelData.vertices.push_back(vData);
+
+	vData = {
+		{1.0f, -1.0f, 0.0f, 1.0f},
+		{1.0f, -1.0f},
+		{0.0f, 0.0f, 1.0f}
+	};
+
+	planeModelData.vertices.push_back(vData);
+
+	vData = {
+		{-1.0f, -1.0f, 0.0f, 1.0f},
+		{0.0f, 0.0f},
+		{0.0f, 0.0f, 1.0f}
+	};
+
+	planeModelData.vertices.push_back(vData);
+}
+
+void ParticleManager::CreateRingVertexData() {
+	const uint32_t ringDivide = 32;
+	const float outerRadius = 1.0f;
+	const float innerRadius = 0.2f;
+	const float radianPerDivide = 2.0f * std::numbers::pi_v<float> / float(ringDivide);
+
+	for (uint32_t index = 0; index < ringDivide; ++index)
+	{
+		float sin = std::sin(index * radianPerDivide);
+		float cos = std::cos(index * radianPerDivide);
+		float sinNext = std::sin((index + 1) * radianPerDivide);
+		float cosNext = std::cos((index + 1) * radianPerDivide);
+		float u = float(index) / float(ringDivide);
+		float uNext = float(index + 1) / float(ringDivide);
+		VertexData vertexData;
+		vertexData = { {-sin * outerRadius, cos * outerRadius, 0.0f, 1.0f},			{u, 0.0f},		{0.0f, 0.0f, 1.0f} };
+		ringModelData.vertices.push_back(vertexData);
+		vertexData = { {-sinNext * outerRadius, cosNext * outerRadius, 0.0f, 1.0f}, {uNext, 0.0f},  {0.0f, 0.0f, 1.0f} };
+		ringModelData.vertices.push_back(vertexData);
+		vertexData = { {-sin * innerRadius, cos * innerRadius, 0.0f, 1.0f},		    {u, 1.0f},		{0.0f, 0.0f, 1.0f} };
+		ringModelData.vertices.push_back(vertexData);
+		vertexData = { {-sinNext * innerRadius, cosNext * innerRadius, 0.0f, 1.0f}, {uNext, 1.0f},  {0.0f, 0.0f, 1.0f} };
+		ringModelData.vertices.push_back(vertexData);
+		vertexData = { {-sin * innerRadius, cos * innerRadius, 0.0f, 1.0f},		    {u, 1.0f},		{0.0f, 0.0f, 1.0f} };
+		ringModelData.vertices.push_back(vertexData);
+		vertexData = { {-sinNext * outerRadius, cosNext * outerRadius, 0.0f, 1.0f}, {uNext, 0.0f},  {0.0f, 0.0f, 1.0f} };
+		ringModelData.vertices.push_back(vertexData);
+
+
+	}
+	modelData.vertices = ringModelData.vertices;
+}
+
+void ParticleManager::CreateCylinderVertexData() {
+	const uint32_t cylinderDivide = 16;
+	const float topRadius = 1.0f;
+	const float bottomRadius = 1.0f;
+	const float height = 1.0f;
+	float radianPerDivide = 2.0f * std::numbers::pi_v<float> / float(cylinderDivide);
+
+	for (uint32_t index = 0; index < cylinderDivide; ++index) {
+		float sin = std::sin(index * radianPerDivide);
+		float cos = std::cos(index * radianPerDivide);
+		float sinNext = std::sin((index + 1) * radianPerDivide);
+		float cosNext = std::cos((index + 1) * radianPerDivide);
+		float u = float(index) / float(cylinderDivide);
+		float uNext = float(index + 1) / float(cylinderDivide);
+
+		VertexData vertexData;
+		vertexData = { { -sin * topRadius, height, cos * topRadius, 1.0f }, { u, 0.0f }, { -sin, 0.0f, cos } };
+		cylinderModelData.vertices.push_back(vertexData);
+		vertexData = { {-sinNext * topRadius, height, cosNext * topRadius, 1.0f}, {uNext, 0.0f}, {-sinNext, 0.0f, cosNext} };
+		cylinderModelData.vertices.push_back(vertexData);
+		vertexData = { {-sin * bottomRadius, 0.0f, cos * bottomRadius, 1.0f}, {u, 1.0f}, {-sin, 0.0f, cos} };
+		cylinderModelData.vertices.push_back(vertexData);
+		vertexData = { {-sin * bottomRadius, 0.0f, cos * bottomRadius, 1.0f}, {u, 1.0f}, {-sin, 0.0f, cos} };
+		cylinderModelData.vertices.push_back(vertexData);
+		vertexData = { {-sinNext * topRadius, height, cosNext * topRadius, 1.0f}, {uNext, 0.0f}, {-sinNext, 0.0f, cosNext} };
+		cylinderModelData.vertices.push_back(vertexData);
+		vertexData = { {-sinNext * bottomRadius, 0.0f, cosNext * bottomRadius, 1.0f}, {uNext, 1.0f}, {-sinNext, 0.0f, cosNext} };
+		cylinderModelData.vertices.push_back(vertexData);
+	}
+
 }
 
 bool ParticleManager::IsCollision(const AABB& aabb, const Vector3& point) {
