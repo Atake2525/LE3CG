@@ -23,6 +23,13 @@ struct PointLight {
 	float padding[2];
 };
 
+struct PLight
+{
+	PointLight light[10];
+	int lightCount = 2;
+	float padding[10];
+};
+
 struct SpotLight {
 	Vector4 color;         //!< ライトの色
 	Vector3 position;      //!< ライトの位置
@@ -81,7 +88,7 @@ private:
 
 	DirectionalLight* directionalLightData = nullptr;
 
-	PointLight* pointLightData = nullptr;
+	PLight* pointLightData = nullptr;
 
 	SpotLight* spotLightData = nullptr;
 

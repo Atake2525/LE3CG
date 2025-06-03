@@ -5,13 +5,13 @@
 
 void GameScene::Initialize() {
 
-	ModelManager::GetInstance()->LoadModel("Resources/Model/obj", "stage.obj");
+	ModelManager::GetInstance()->LoadModel("Resources/Model/obj", "terrain.obj", true);
 
 	TextureManager::GetInstance()->LoadTexture("Resources/uvChecker.png");
 
 	camera = new Camera();
 	camera->SetRotate(Vector3(0.36f, 0.0f, 0.0f));
-
+	camera->SetTranslate(Vector3(0.0f, 5.0f, -10.0f));
 	input = Input::GetInstance();
 	input->ShowMouseCursor(true);
 
@@ -19,7 +19,7 @@ void GameScene::Initialize() {
 
 	object3d = new Object3d();
 	object3d->Initialize();
-	object3d->SetModel("stage.obj");
+	object3d->SetModel("terrain.obj");
 
 	sprite = new Sprite();
 	sprite->Initialize("Resources/uvChecker.png");
@@ -30,7 +30,7 @@ void GameScene::Initialize() {
 }
 
 void GameScene::Update() {
-
+	cameraTransform = camera->GetTransform();
 	ImGui::Begin("State");
 	if (ImGui::TreeNode("Camera")) {
 		ImGui::DragFloat3("Tranlate", &cameraTransform.translate.x, 0.1f);
