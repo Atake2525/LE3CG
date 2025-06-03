@@ -54,5 +54,8 @@ private:
 
 	bool enableLighting = false;
 
+
+	Vector2 leftTop;
+	Transform transformSprite;
 };
 
