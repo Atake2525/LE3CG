@@ -26,7 +26,7 @@ struct PointLight {
 struct PLight
 {
 	PointLight light[10];
-	int lightCount = 2;
+	int lightCount;
 	float padding[10];
 };
 
