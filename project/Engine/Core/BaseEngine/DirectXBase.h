@@ -182,7 +182,8 @@ private:
 
 	const Vector4 renderTargetClearValue{ 1.0f, 0.0f, 0.0f, 1.0f }; // 分かりやすい赤にする
 
-	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle;
+	D3D12_CPU_DESCRIPTOR_HANDLE srvCPUHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE srvGPUHandle;
 
 
 	//// フェンス
