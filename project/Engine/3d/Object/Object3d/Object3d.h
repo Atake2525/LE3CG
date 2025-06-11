@@ -10,6 +10,7 @@
 #include "AABB.h"
 #include "kMath.h"
 #include "Quaternion.h"
+#include "Animator.h"
 
 #pragma once
 
@@ -113,6 +114,10 @@ private:
 	AABB first;
 
 	Matrix4x4 worldMatrix;
+
+	// アニメーション
+	float animationTime = 0.0f;
+	Animation animation;
 
 public:
 

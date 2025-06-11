@@ -313,7 +313,25 @@ Matrix4x4 MakeRotateZMatrix(float radian) {
 	ans.m[3][3] = 1;
 
 	return ans;
-};
+}
+
+Matrix4x4 MakeQuaternionMatrix(Quaternion q) {
+	Matrix4x4 result = { 0 };
+
+	result.m[0][0] = pow(q.w, 2.0f) + pow(q.x, 2.0f) - pow(q.y, 2.0f) - pow(q.z, 2.0f);
+	result.m[0][1] = 2 * (q.x * q.y + q.w * q.z);
+	result.m[0][2] = 2 * (q.x * q.z - q.w * q.y);
+	
+	result.m[1][0] = 2 * (q.x * q.y - q.w * q.z);
+	result.m[1][1] = pow(q.w, 2.0f) - pow(q.x, 2.0f) + pow(q.y, 2.0f) - pow(q.z, 2.0f);
+	result.m[1][2] = 2 * (q.y * q.z + q.w * q.x);
+	
+	result.m[2][0] = 2 * (q.x * q.y + q.w * q.z);
+	result.m[2][1] = 2 * (q.y * q.z - q.w * q.x);
+	result.m[2][2] = pow(q.w, 2.0f) - pow(q.x, 2.0f) - pow(q.y, 2.0f) + pow(q.z, 2.0f);
+
+	return result;
+}
 
 //座標変換
 Vector3 MatrixTransform(const Vector3& vector, const Matrix4x4& matrix) {
@@ -392,7 +410,35 @@ Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Ve
 	ans.m[3][2] = translate.z;
 
 	return ans;
-};
+}
+Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Quaternion& rotate, const Vector3& translate)
+{
+	Matrix4x4 R = { 0 };
+	Matrix4x4 ans = { 0 };
+
+	Matrix4x4 rot = MakeQuaternionMatrix(rotate);
+
+	Vector3	quat = TransformNormal(scale, rot);
+
+	R = Multiply(MakeRotateXMatrix(quat.x), Multiply(MakeRotateYMatrix(quat.y), MakeRotateZMatrix(quat.z)));
+
+
+	ans.m[0][0] = scale.x * R.m[0][0];
+	ans.m[0][1] = scale.x * R.m[0][1];
+	ans.m[0][2] = scale.x * R.m[0][2];
+	ans.m[1][0] = scale.y * R.m[1][0];
+	ans.m[1][1] = scale.y * R.m[1][1];
+	ans.m[1][2] = scale.y * R.m[1][2];
+	ans.m[2][0] = scale.z * R.m[2][0];
+	ans.m[2][1] = scale.z * R.m[2][1];
+	ans.m[2][2] = scale.z * R.m[2][2];
+	ans.m[3][3] = 1;
+	ans.m[3][0] = translate.x;
+	ans.m[3][1] = translate.y;
+	ans.m[3][2] = translate.z;
+
+	return ans;
+}
 
 //３次元アフィン変換行列
 Matrix4x4 MakeAffineMatrixInQuaternion(const Vector3& scale, const Matrix4x4& axisAngle, const Vector3& translate) {
@@ -566,5 +612,23 @@ Vector3 TransformNormal(const Vector3& v, const Matrix4x4& m) {
 		v.x * m.m[0][1] + v.y * m.m[1][1] + v.z * m.m[2][1],
 		v.x * m.m[0][2] + v.y * m.m[1][2] + v.z * m.m[2][2],
 	};
+	return result;
+}
+
+// 線形補間
+Vector3 Lerp(const Vector3& v1, const Vector3& v2, float t) {
+	Vector3 ans = { 0 };
+	ans.x = t * v1.x + (1.0f - t) * v2.x;
+	ans.y = t * v1.y + (1.0f - t) * v2.y;
+	ans.z = t * v1.z + (1.0f - t) * v2.z;
+	return ans;
+}
+
+Quaternion Lerp(const Quaternion& q1, const Quaternion& q2, float t)
+{
+	Quaternion result = { 0 };
+	result.x = t * q1.x + (1.0f - t) * q2.x;
+	result.y = t * q1.y + (1.0f - t) * q2.y;
+	result.z = t * q1.z + (1.0f - t) * q2.z;
 	return result;
 }

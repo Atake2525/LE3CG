@@ -1,4 +1,3 @@
-#pragma once
 #include "WinApp.h"
 #include <wrl.h>
 #include <dxgi1_6.h>
@@ -11,6 +10,7 @@
 #include <thread>
 #include "externels/DirectXTex/DirectXTex.h"
 #include "Vector4.h"
+#pragma once
 
 
 class DirectXBase {

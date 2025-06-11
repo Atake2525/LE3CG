@@ -8,8 +8,11 @@
 #include "Vector3.h"
 #include "Vector4.h"
 #include "Matrix4x4.h"
-
+#include "Quaternion.h"
+#include <map>
 #pragma once
+#include "Animator.h"
+
 
 struct VertexData {
 	Vector4 position;
@@ -41,7 +44,7 @@ class Model {
 public:
 
 	// 初期化
-	void Initialize(std::string directoryPath, std::string filename, bool enableLighting);
+	void Initialize(std::string directoryPath, std::string filename, const bool enableLighting, const bool isAnimation);
 	
 	// 更新
 	void Draw();
@@ -60,6 +63,9 @@ public:
 	const ModelData& GetModelData() const { return modelData;}
 	// Getter(ModelData vertices)
 	const std::vector<VertexData>& GetVertices() const { return modelData.vertices; }
+
+	const Animation& GetAnimation() const { return animation; }
+	const bool IsAnimation() const { return isAnimation; }
 
 	// Setter(Color)
 	void SetColor(const Vector4& color) { materialData->color = color; }
@@ -93,6 +99,9 @@ private:
 	// .objファイルの読み取り
 	static ModelData LoadModelFile(const std::string& directoryPath, const std::string& fileName);
 
+	// アニメーションをロード
+	static Animation LoadAnimationFile(const std::string& directoryPath, const std::string& filename);
+
 	// VertexResourceを作成する
 	void CreateVertexResource();
 	// MaterialResourceを作成する
@@ -100,4 +109,7 @@ private:
 
 	// VertexBufferViewを作成する(値を設定するだけ)
 	void CreateVertexBufferView();
+
+	Animation animation;
+	bool isAnimation = false;
 };

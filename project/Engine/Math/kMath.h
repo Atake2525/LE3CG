@@ -58,6 +58,9 @@ Matrix4x4 MakeRotateYMatrix(float radian);
 // 3, z軸回転行列
 Matrix4x4 MakeRotateZMatrix(float radian);
 
+// 任意軸回転行列
+Matrix4x4 MakeQuaternionMatrix(Quaternion q);
+
 //座標変換
 Vector3 MatrixTransform(const Vector3& vector, const Matrix4x4& matrix);
 
@@ -72,6 +75,9 @@ Matrix4x4 Multiply(const Matrix4x4& m1, const Matrix4x4& m2);
 
 //３次元アフィン変換行列
 Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Vector3& translate);
+
+//３次元アフィン変換行列
+Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Quaternion& rotate, const Vector3& translate);
 
 //3次元アフィン変換行列Quaternion版
 Matrix4x4 MakeAffineMatrixInQuaternion(const Vector3& scale, const Matrix4x4& axisAngle, const Vector3& translate);
@@ -131,3 +137,9 @@ float Length(const Vector3& v);
 
 // ベクトル変換
 Vector3 TransformNormal(const Vector3& v, const Matrix4x4& m);
+
+// 線形補間
+Vector3 Lerp(const Vector3& v1, const Vector3& v2, float t);
+
+// 線形補間
+Quaternion Lerp(const Quaternion& v1, const Quaternion& v2, float t);

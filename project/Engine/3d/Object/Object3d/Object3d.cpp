@@ -14,6 +14,10 @@
 #include <sstream>
 #include <cassert>
 
+#include "externels/imgui/imgui.h"
+#include "externels/imgui/imgui_impl_dx12.h"
+#include "externels/imgui/imgui_impl_win32.h"
+
 using namespace Microsoft::WRL;
 
 void Object3d::Initialize() { 
@@ -94,6 +98,33 @@ void Object3d::Initialize() {
 }
 
 void Object3d::Update() {
+	animationTime += 1.0f / 60.0f;
+	animationTime = std::fmod(animationTime, animation.duration);
+	NodeAnimation& rootNodeAnimation = animation.nodeAnimation[animation.nodeAnimationName];
+	Vector3 translate = {0.0f, 0.0f, 0.0f};
+	Quaternion rotate = { 0.0f, 0.0f, 0.0f };
+	Vector3 scale = { 1.0f, 1.0f, 1.0f };
+	if (rootNodeAnimation.translate.KeyFrames.size() > 0)
+	{
+		translate = CalculateValue(rootNodeAnimation.translate.KeyFrames, animationTime);
+	}
+	if (rootNodeAnimation.rotate.KeyFrames.size() > 0)
+	{
+		rotate = CalculateValue(rootNodeAnimation.rotate.KeyFrames, animationTime);
+	}
+	if (rootNodeAnimation.scale.KeyFrames.size() > 0)
+	{
+		scale = CalculateValue(rootNodeAnimation.scale.KeyFrames, animationTime);
+	}
+	Matrix4x4 localMatrix = MakeAffineMatrix(scale, rotate, translate);
+
+	Vector3 rot = SwapDegree({ rotate.x, rotate.y, rotate.z});
+	ImGui::Begin("StateAnimation");
+	ImGui::DragFloat3("translate", &translate.x, 0.0f);
+	ImGui::DragFloat3("rotate", &rot.x, 0.0f);
+	ImGui::DragFloat3("scale", &scale.x, 0.0f);
+	ImGui::DragFloat("Animation", &animationTime, 0.0f);
+	ImGui::End();
 
 	// 3DのTransform処理
 	worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
@@ -107,13 +138,13 @@ void Object3d::Update() {
 	Matrix4x4 worldViewProjectionMatrix;
 	if (camera) {
 		const Matrix4x4& viewProjectionMatrix = camera->GetViewProjectionMatrix();
-		worldViewProjectionMatrix = Multiply(worldMatrix, viewProjectionMatrix);
+		worldViewProjectionMatrix = Multiply(Multiply(worldMatrix, localMatrix), viewProjectionMatrix);
 	} else {
 		worldViewProjectionMatrix = worldMatrix;
 	}
 	
 	transformationMatrix->WVP = worldViewProjectionMatrix;
-	transformationMatrix->World = worldMatrix;
+	transformationMatrix->World = Multiply(localMatrix, worldMatrix);
 
 	Vector3 worldPos = { worldMatrix.m[3][0], worldMatrix.m[3][1], worldMatrix.m[3][2] };
 
@@ -168,6 +199,10 @@ void Object3d::SetModel(const std::string& filePath) {
 	// モデルを検索してセットする
 	model_ = ModelManager::GetInstance()->FindModel(filePath);
 	CreateAABB();
+	if (model_->IsAnimation())
+	{
+		animation = model_->GetAnimation();
+	}
 }
 
 void Object3d::SetColor(const Vector4& color) { 

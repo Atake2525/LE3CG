@@ -38,7 +38,9 @@ public:
 	const bool& isFinished() const { return finished; }
 
 private:
-	Object3d* object3d = nullptr;
+	//Object3d* object3d = nullptr;
+
+	Object3d* cube = nullptr;
 
 	Sprite* sprite = nullptr;
 

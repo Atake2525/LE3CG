@@ -6,6 +6,7 @@
 void GameScene::Initialize() {
 
 	ModelManager::GetInstance()->LoadModel("Resources/Model/obj", "terrain.obj");
+	ModelManager::GetInstance()->LoadModel("Resources/Model/gltf/Cube", "AnimatedCube.gltf", false, true);
 
 	TextureManager::GetInstance()->LoadTexture("Resources/uvChecker.png");
 
@@ -23,9 +24,13 @@ void GameScene::Initialize() {
 
 	Object3dBase::GetInstance()->SetDefaultCamera(camera);
 
-	object3d = new Object3d();
-	object3d->Initialize();
-	object3d->SetModel("terrain.obj");
+	//object3d = new Object3d();
+	//object3d->Initialize();
+	//object3d->SetModel("terrain.obj");
+
+	cube = new Object3d();
+	cube->Initialize();
+	cube->SetModel("AnimatedCube.gltf");
 
 	sprite = new Sprite();
 	sprite->Initialize("Resources/uvChecker.png");
@@ -34,7 +39,7 @@ void GameScene::Initialize() {
 	cameraTransform.rotate = { 0.36f, 0.0f, 0.0f };
 	cameraTransform.translate = { 0.0f, 5.0f, -10.0f };
 
-	modelTransform = object3d->GetTransform();
+	//modelTransform = object3d->GetTransform();
 }
 
 void GameScene::Update() {
@@ -111,13 +116,15 @@ void GameScene::Update() {
 	camera->SetTranslate(cameraTransform.translate);
 	camera->SetRotate(cameraTransform.rotate);
 	camera->Update();
-	object3d->SetTransform(modelTransform);
-	object3d->SetEnableLighting(enableLighting);
-	object3d->Update();
-	aabb = object3d->GetAABB();
+	//object3d->SetTransform(modelTransform);
+	//object3d->SetEnableLighting(enableLighting);
+	//object3d->Update();
+	//aabb = object3d->GetAABB();
 	sprite->Update();
 	
 	input->Update();
+
+	cube->Update();
 
 	ParticleManager::GetInstance()->Update();
 
@@ -131,7 +138,9 @@ void GameScene::Draw() {
 
 	Object3dBase::GetInstance()->ShaderDraw();
 
-	object3d->Draw();
+	//object3d->Draw();
+
+	cube->Draw();
 
 	ParticleManager::GetInstance()->Draw();
 
@@ -142,7 +151,9 @@ void GameScene::Finalize() {
 
 	delete camera;
 
-	delete object3d;
+	//delete object3d;
+
+	delete cube;
 
 	delete sprite;
 
