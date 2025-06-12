@@ -5,6 +5,8 @@
     <FxCompile Include="Resources\shaders\Object3d.VS.hlsl" />
     <FxCompile Include="Resources\shaders\Particle.PS.hlsl" />
     <FxCompile Include="Resources\shaders\Particle.VS.hlsl" />
+    <FxCompile Include="Resources\shaders\CopyImage.PS.hlsl" />
+    <FxCompile Include="Resources\shaders\CopyImage.VS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Audio\Audio.cpp" />
@@ -38,6 +40,7 @@
     <ClCompile Include="Application\Scene\GameScene.cpp" />
     <ClCompile Include="Application\Scene\MyGame.cpp" />
     <ClCompile Include="Engine\Lighting\Light.cpp" />
+    <ClCompile Include="Engine\Core\BaseEngine\OffScreenRnederingSprite.cpp" />
     <ClCompile Include="Engine\Core\Shader\Shader.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -78,6 +81,7 @@
     <ClInclude Include="Application\Scene\GameScene.h" />
     <ClInclude Include="Application\Scene\MyGame.h" />
     <ClInclude Include="Engine\Lighting\Light.h" />
+    <ClInclude Include="Engine\Core\BaseEngine\OffScreenRnederingSprite.h" />
     <ClInclude Include="Engine\Core\Shader\Shader.h" />
   </ItemGroup>
   <ItemGroup>
@@ -86,6 +90,7 @@
   <ItemGroup>
     <None Include="Resources\shaders\Object3d.hlsli" />
     <None Include="Resources\shaders\Particle.hlsli" />
+    <None Include="Resources\shaders\CopyImage.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="externels\imgui\LICENSE.txt" />

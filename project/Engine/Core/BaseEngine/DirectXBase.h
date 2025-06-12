@@ -26,6 +26,13 @@ public:
 	// 描画後処理
 	void PostDraw();
 
+	// 描画前処理
+	void PreDrawRenderTexture();
+
+	// 描画後処理
+	void PostDrawRenderTexture();
+
+
 	// 終了処理
 	void Finalize();
 
@@ -76,6 +83,9 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Device> device;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> CreateDepthStencilTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, int32_t width, int32_t height);
+
+	// RenderTextureの生成
+	Microsoft::WRL::ComPtr<ID3D12Resource> CreateRenderTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, int32_t width, int32_t height, DXGI_FORMAT format, const Vector4& clearColor);
 
 	// FPS固定初期化
 	void InitializeFixFPS();
@@ -166,6 +176,16 @@ private:
 	// SwapChainからResourceを引っ張ってくる
 	//std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, 2> swapChainResources;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[2];
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvTextureHandle;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> renderTextureResource;
+
+	const Vector4 renderTargetClearValue{ 1.0f, 0.0f, 0.0f, 1.0f }; // 分かりやすい赤にする
+
+	D3D12_CPU_DESCRIPTOR_HANDLE srvCPUHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE srvGPUHandle;
+
+
 	//// フェンス
 	Microsoft::WRL::ComPtr<ID3D12Fence> fence = nullptr;
 	uint64_t fenceValue = 0;
@@ -202,4 +222,45 @@ private:
 
 	// DSV用のヒープでディスクリプタの数は1。DSVはShader内で触るものではないので、ShaderVisibleはFalse
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> dsvDescriptorHeap = nullptr;
+
+	// offScreenRendering用の3角形の変数宣言
+	void CreatePSO();
+
+	D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
+
+	/// Rootsignature
+	// DescriptorRange
+	D3D12_DESCRIPTOR_RANGE descriptorRange[1] = {};
+	// Samplerの設定
+	D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
+	// Resource作る度に配列を増やしす
+	// RootParameter作成、PixelShaderのMatrixShaderのTransform
+	D3D12_ROOT_PARAMETER rootParameters[3] = {};
+	// シリアライズしてバイナリにする
+	Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob = nullptr;
+	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
+	// バイナリをもとに作成
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature = nullptr;
+	// InputLayout
+	D3D12_INPUT_ELEMENT_DESC inputElementDescs[2] = {};
+	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
+	// BlendStateの設定
+	D3D12_BLEND_DESC blendDesc{};
+	// RasiterzerStateの設定
+	D3D12_RASTERIZER_DESC rasterizerDesc{};
+
+	Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob;
+
+	Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob;
+
+	// DepthStencilStateの設定
+	D3D12_DEPTH_STENCIL_DESC depthStencilDescPso{};
+
+	/// GraphicsPipeLineState
+	// PSOを作成する
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
+
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPilelineState = nullptr;
+
+	uint32_t textureIndex;
 };

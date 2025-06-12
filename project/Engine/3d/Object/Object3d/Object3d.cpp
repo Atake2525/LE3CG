@@ -178,7 +178,7 @@ const Vector4& Object3d::GetColor() const {
 	return model_->GetColor(); 
 }
 
-const bool& Object3d::GetEnableLighting() const { 
+const bool Object3d::GetEnableLighting() const { 
 	return model_->GetEnableLighting();
 }
 
@@ -186,7 +186,7 @@ void Object3d::SetEnableLighting(const bool& enableLighting) {
 	model_->SetEnableLighting(enableLighting);
 }
 
-const Vector3& Object3d::GetRotateInDegree() const { 
+const Vector3 Object3d::GetRotateInDegree() const { 
 	return SwapDegree(transform.rotate);
 }
 
@@ -231,7 +231,7 @@ void Object3d::CreateAABB() {
 	}
 }
 
-const bool& Object3d::CheckCollision(Object3d* object) const {
+const bool Object3d::CheckCollision(Object3d* object) const {
 	return CollisionAABB(aabb, object->GetAABB());
 }
 
