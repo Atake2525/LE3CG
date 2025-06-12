@@ -52,7 +52,7 @@ private:
 
 	AABB aabb;
 
-	bool enableLighting = false;
+	bool enableLighting = true;
 
 
 	Vector2 leftTop;

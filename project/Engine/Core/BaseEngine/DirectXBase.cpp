@@ -3,7 +3,6 @@
 #include "StringUtility.h"
 #include "format"
 #include <cassert>
-#include "OffScreenRnederingSprite.h"
 #include "TextureManager.h"
 
 
@@ -207,18 +206,18 @@ void DirectXBase::CreatePSO() {
 	// Resource作る度に配列を増やしす
 	// RootParameter作成、PixelShaderのMatrixShaderのTransform
 	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;              // CBVを使う
-	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;           // PixelShaderで使う
-	rootParameters[0].Descriptor.ShaderRegister = 0;                              // レジスタ番号0とバインド
-	rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;              // CBVを使う
-	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;          // VertexShaderで使う
-	rootParameters[1].Descriptor.ShaderRegister = 0;                              // レジスタ番号0を使う
-	rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE; // DescriptorTableを使う
+	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;          // VertexShaderで使う
+	rootParameters[0].Descriptor.ShaderRegister = 0;                              // レジスタ番号0を使う
+	rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE; // DescriptorTableを使う
+	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;           // PixelShaderで使う
+	rootParameters[1].DescriptorTable.pDescriptorRanges = descriptorRange;        // Tableの中身の配列を指定
+	rootParameters[1].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
+	rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;              // CBVを使う
 	rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;           // PixelShaderで使う
-	rootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;        // Tableの中身の配列を指定
-	rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
-	rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
-	rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // PixelShaderを使う
-	rootParameters[3].Descriptor.ShaderRegister = 1;                    // レジスタ番号1を使う
+	rootParameters[2].Descriptor.ShaderRegister = 0;                              // レジスタ番号0とバインド
+	//rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
+	//rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // PixelShaderを使う
+	//rootParameters[3].Descriptor.ShaderRegister = 0;                    // レジスタ番号0を使う
 	descriptionRootSignature.pParameters = rootParameters;              // ルートパラメータ配列へのポインタ
 	descriptionRootSignature.NumParameters = _countof(rootParameters);  // 配列の長さ
 
@@ -294,6 +293,10 @@ void DirectXBase::CreatePSO() {
 	// 実際に生成
 	hr = device->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPilelineState));
 	assert(SUCCEEDED(hr));
+
+	//monotoneResouce = CreateBufferResource(sizeof(Monotone));
+	//monotoneResouce->Map(0, nullptr, reinterpret_cast<void**>(&monotone));
+	//monotone = { 1.0f, 1.0f, 1.0f }; // 画面が黒くなる
 }
 
 void DirectXBase::Initialize(WinApp* winApp) {
@@ -317,7 +320,16 @@ void DirectXBase::Initialize(WinApp* winApp) {
 	InitializeScissorRect();
 	CreateDXCCompiler();
 	InitializeImgui();
-	CreatePSO();
+	//CreatePSO();
+
+	offscreen = new OffScreenRnedering();
+	offscreen->Initialize(this);
+	Vector4 col = offscreen->GetRenderTargetClearValue();
+	// 指定した色で画面全体をクリアする
+	clearColor[0] = col.x;
+	clearColor[1] = col.y;
+	clearColor[2] = col.z;
+	clearColor[3] = col.w;
 }
 
 // 描画前処理
@@ -369,11 +381,20 @@ void DirectXBase::PreDraw() {
 	commandList->RSSetViewports(1, &viewPort);       // Viewportを設定
 	commandList->RSSetScissorRects(1, &scissorRect); // Scirssorを設定
 
-	commandList->DrawInstanced(3, 1, 0, 0);
+	//commandList->SetGraphicsRootSignature(rootSignature.Get());
+	//commandList->SetPipelineState(graphicsPilelineState.Get());
+	//commandList->SetGraphicsRootConstantBufferView(2, monotoneResouce->GetGPUVirtualAddress());
+	//commandList->SetGraphicsRootDescriptorTable(1, srvGPUHandle);
+
+	//commandList->DrawInstanced(3, 1, 0, 0);
+
+	offscreen->Draw();
+
 }
 
 // 描画後処理
 void DirectXBase::PostDraw() {
+
 	// これから書き込むバックバッファのインデックスを取得
 	//UINT bbIndex = swapChain->GetCurrentBackBufferIndex();
 	// 画面に描く処理はすべて終わり、画面に移すので、状態を遷移
@@ -418,7 +439,7 @@ void DirectXBase::PostDraw() {
 }
 
 void DirectXBase::PreDrawRenderTexture() {
-	device->CreateRenderTargetView(renderTextureResource.Get(), &rtvDesc, GetCPUDescriptorHandle(rtvDescriptorHeap, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV), 2));
+	device->CreateRenderTargetView(offscreen->GetRenderTextureResource().Get(), &rtvDesc, GetCPUDescriptorHandle(rtvDescriptorHeap, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV), 2));
 	rtvTextureHandle = GetCPUDescriptorHandle(rtvDescriptorHeap, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV), 2);
 	// これから書き込むバックバッファのインデックスを取得
 	//UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
@@ -429,7 +450,7 @@ void DirectXBase::PreDrawRenderTexture() {
 	// Noneにしておく
 	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 	// バリアを張る対象のリソース。現在のバックバッファに対して行う
-	barrier.Transition.pResource = renderTextureResource.Get();
+	barrier.Transition.pResource = offscreen->GetRenderTextureResource().Get();
 	// 遷移前(現在)のRecourceState
 	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 	// 遷移後のResourceState
@@ -446,8 +467,6 @@ void DirectXBase::PreDrawRenderTexture() {
 	// 指定した深度で画面全体をクリアする
 	commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-	// 指定した色で画面全体をクリアする
-	float clearColor[] = {renderTargetClearValue.x, renderTargetClearValue.y, renderTargetClearValue.z, renderTargetClearValue.w }; // 青っぽい色。RGBAの順
 	//float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f }; // 青っぽい色。RGBAの順
 	commandList->ClearRenderTargetView(rtvTextureHandle, clearColor, 0, nullptr);
 
@@ -460,13 +479,14 @@ void DirectXBase::PreDrawRenderTexture() {
 
 }
 
+void DirectXBase::Update() {
+
+	offscreen->Update();
+}
+
 void DirectXBase::PostDrawRenderTexture() {
 	// これから書き込むバックバッファのインデックスを取得
 	backBufferIndex = swapChain->GetCurrentBackBufferIndex();
-
-	commandList->SetGraphicsRootSignature(rootSignature.Get());
-	commandList->SetPipelineState(graphicsPilelineState.Get());
-	commandList->SetGraphicsRootDescriptorTable(2, srvGPUHandle);
 
 	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
@@ -686,30 +706,30 @@ void DirectXBase::InitializeRenderTargetView() {
 	//D3D12_CPU_DESCRIPTOR_HANDLE rtvStartHandle = rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
 
-	/*for (uint32_t i = 0; i < 2; i++) {
+	for (uint32_t i = 0; i < 2; i++) {
 		rtvHandles[i] = GetCPUDescriptorHandle(rtvDescriptorHeap, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV), i);
 		device->CreateRenderTargetView(swapChainResources[i].Get(), &rtvDesc, rtvHandles[i]);
 
-	}*/
+	}
 
 	//ComPtr<ID3D12Resource> renderTextureResource;
 
 	//renderTextureResource = CreateRenderTextureResource(device, WinApp::kClientWidth, WinApp::kClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, renderTargetClearValue);
 	//device->CreateRenderTargetView(renderTextureResource.Get(), &rtvDesc, GetCPUDescriptorHandle(rtvDescriptorHeap, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV), 0));
 
-	renderTextureResource = CreateRenderTextureResource(device, WinApp::kClientWidth, WinApp::kClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, renderTargetClearValue);
+	//renderTextureResource = CreateRenderTextureResource(device, WinApp::kClientWidth, WinApp::kClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, renderTargetClearValue);
 
-	// SRVの設定。FormatはResourceと同じにしておく
-	D3D12_SHADER_RESOURCE_VIEW_DESC renderTextureSrvDesc{};
-	renderTextureSrvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-	renderTextureSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	renderTextureSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	renderTextureSrvDesc.Texture2D.MipLevels = 1;
+	//// SRVの設定。FormatはResourceと同じにしておく
+	//D3D12_SHADER_RESOURCE_VIEW_DESC renderTextureSrvDesc{};
+	//renderTextureSrvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	//renderTextureSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	//renderTextureSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	//renderTextureSrvDesc.Texture2D.MipLevels = 1;
 
-	srvCPUHandle = GetSRVCPUDescriptorHandle(1);
-	srvGPUHandle = GetSRVGPUDescriptorHandle(1);
-	// SRVの生成
-	device->CreateShaderResourceView(renderTextureResource.Get(), &renderTextureSrvDesc, srvCPUHandle);
+	//srvCPUHandle = GetSRVCPUDescriptorHandle(1);
+	//srvGPUHandle = GetSRVGPUDescriptorHandle(1);
+	//// SRVの生成
+	//device->CreateShaderResourceView(renderTextureResource.Get(), &renderTextureSrvDesc, srvCPUHandle);
 
 
 }
@@ -763,7 +783,6 @@ Microsoft::WRL::ComPtr<IDxcBlob> DirectXBase::CompileShader(
 	if (shaderError != nullptr && shaderError->GetStringLength() != 0) {
 		Log(shaderError->GetStringPointer());
 		// 警告・エラーダメゼッタイ
-		assert(false);
 		assert(false);
 	}
 
@@ -907,6 +926,7 @@ void DirectXBase::UpdateFixFPS() {
 
 // 終了処理
 void DirectXBase::Finalize() { 
+	delete offscreen;
 	CloseHandle(fenceEvent);
 	// ImGuiの終了処理。詳細はさして重要ではないので解説は省略する。
 	ImGui_ImplDX12_Shutdown();

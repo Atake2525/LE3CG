@@ -1,19 +1,53 @@
-#include "OffScreenRnederingSprite.h"
+#include "OffScreenRnedering.h"
 
 #include "Logger.h"
 #include <cassert>
 #include "DirectXBase.h"
 
+#include "externels/imgui/imgui_impl_dx12.h"
+#include "externels/imgui/imgui_impl_win32.h"
+
+
 using namespace Microsoft::WRL;
 using namespace Logger;
 
 
-void OffScreenRnederingSprite::Initialize(DirectXBase* directxBase) {
+void OffScreenRnedering::Initialize(DirectXBase* directxBase) {
 	directxBase_ = directxBase;
 	CreateGraphicsPipeLineState();
+
+	renderTextureResource = directxBase->CreateRenderTextureResource(directxBase_->GetDevice(), WinApp::kClientWidth, WinApp::kClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, renderTargetClearValue);
+
+	// SRVの設定。FormatはResourceと同じにしておく
+	D3D12_SHADER_RESOURCE_VIEW_DESC renderTextureSrvDesc{};
+	renderTextureSrvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	renderTextureSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	renderTextureSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	renderTextureSrvDesc.Texture2D.MipLevels = 1;
+
+	srvCPUHandle = directxBase_->GetSRVCPUDescriptorHandle(1);
+	srvGPUHandle = directxBase_->GetSRVGPUDescriptorHandle(1);
+	// SRVの生成
+	directxBase_->GetDevice()->CreateShaderResourceView(renderTextureResource.Get(), &renderTextureSrvDesc, srvCPUHandle);
+
+	monotone = { 1.0f, 1.0f, 1.0f }; // 画面が黒くなる
+	monotoneResouce = directxBase_->CreateBufferResource(sizeof(Monotone));
+	monotoneResouce->Map(0, nullptr, reinterpret_cast<void**>(&monotone));
+	monotone = { 1.0f, 1.0f, 1.0f }; // 画面が黒くなる
+	test = monotone;
 }
 
-void OffScreenRnederingSprite::CreateRootSignature() {
+void OffScreenRnedering::Update() {
+	ImGui::Begin("OffScreen");
+	ImGui::SliderFloat("Tone", &test.x, 0.0f, 1.0f);
+	ImGui::ColorEdit3("ColTone", &test.x);
+	ImGui::End();
+
+	//monotone = test;
+	monotone.x -= 0.001f;
+}
+
+void OffScreenRnedering::CreateRootSignature() {
 	descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
 	// DescriptorRange
@@ -40,15 +74,18 @@ void OffScreenRnederingSprite::CreateRootSignature() {
 	// Resource作る度に配列を増やしす
 	// RootParameter作成、PixelShaderのMatrixShaderのTransform
 	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;              // CBVを使う
-	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;           // PixelShaderで使う
-	rootParameters[0].Descriptor.ShaderRegister = 0;                              // レジスタ番号0とバインド
-	rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;              // CBVを使う
-	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;          // VertexShaderで使う
-	rootParameters[1].Descriptor.ShaderRegister = 0;                              // レジスタ番号0を使う
-	rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE; // DescriptorTableを使う
+	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;          // VertexShaderで使う
+	rootParameters[0].Descriptor.ShaderRegister = 0;                              // レジスタ番号0を使う
+	rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE; // DescriptorTableを使う
+	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;           // PixelShaderで使う
+	rootParameters[1].DescriptorTable.pDescriptorRanges = descriptorRange;        // Tableの中身の配列を指定
+	rootParameters[1].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
+	rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;              // CBVを使う
 	rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;           // PixelShaderで使う
-	rootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;        // Tableの中身の配列を指定
-	rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
+	rootParameters[2].Descriptor.ShaderRegister = 0;                              // レジスタ番号0とバインド
+	//rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
+	//rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // PixelShaderを使う
+	//rootParameters[3].Descriptor.ShaderRegister = 0;                    // レジスタ番号0を使う
 	descriptionRootSignature.pParameters = rootParameters;              // ルートパラメータ配列へのポインタ
 	descriptionRootSignature.NumParameters = _countof(rootParameters);  // 配列の長さ
 
@@ -70,10 +107,7 @@ void OffScreenRnederingSprite::CreateRootSignature() {
 	inputElementDescs[1].SemanticIndex = 0;
 	inputElementDescs[1].Format = DXGI_FORMAT_R32G32_FLOAT;
 	inputElementDescs[1].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-	//inputElementDescs[2].SemanticName = "NORMAL";
-	//inputElementDescs[2].SemanticIndex = 0;
-	//inputElementDescs[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-	//inputElementDescs[2].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+
 	inputLayoutDesc.pInputElementDescs = nullptr;
 	inputLayoutDesc.NumElements = 0;
 	// BlendStateの設定
@@ -93,9 +127,9 @@ void OffScreenRnederingSprite::CreateRootSignature() {
 	// 三角形の中を塗りつぶす
 	rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 	// Shaderをコンパイルする
-	vertexShaderBlob = directxBase_->CompileShader(L"Resources/shaders/CopyImage.VS.hlsl", L"vs_6_0");
+	vertexShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Fullscreen.VS.hlsl", L"vs_6_0");
 	assert(vertexShaderBlob != nullptr);
-	pixelShaderBlob = directxBase_->CompileShader(L"Resources/shaders/CopyImage.PS.hlsl", L"ps_6_0");
+	pixelShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Grayscale.PS.hlsl", L"ps_6_0");
 	assert(pixelShaderBlob != nullptr);
 
 	// DepthStencilStateの設定
@@ -107,7 +141,7 @@ void OffScreenRnederingSprite::CreateRootSignature() {
 	depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 }
 
-void OffScreenRnederingSprite::CreateGraphicsPipeLineState() {
+void OffScreenRnedering::CreateGraphicsPipeLineState() {
 	CreateRootSignature();
 	// PSOを作成する
 	graphicsPipelineStateDesc.pRootSignature = rootSignature.Get();                                           // RootSignature
@@ -132,9 +166,16 @@ void OffScreenRnederingSprite::CreateGraphicsPipeLineState() {
 	assert(SUCCEEDED(hr));
 }
 
-void OffScreenRnederingSprite::ShaderDraw() {
+void OffScreenRnedering::Draw() {
+
 	// RootSignatureを設定。PSOに設定しているけど別途設定が必要
 	directxBase_->GetCommandList()->SetGraphicsRootSignature(rootSignature.Get());
 	// PSOを設定
 	directxBase_->GetCommandList()->SetPipelineState(graphicsPilelineState.Get());
+	// モノトーンカラーの設定
+	directxBase_->GetCommandList()->SetGraphicsRootConstantBufferView(2, monotoneResouce->GetGPUVirtualAddress());
+	// srvGPUHandleの設定
+	directxBase_->GetCommandList()->SetGraphicsRootDescriptorTable(1, srvGPUHandle);
+	// Draw call
+	directxBase_->GetCommandList()->DrawInstanced(3, 1, 0, 0);
 }

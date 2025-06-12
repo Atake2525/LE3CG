@@ -41,7 +41,7 @@
     <ClCompile Include="Application\Scene\GameScene.cpp" />
     <ClCompile Include="Application\Scene\MyGame.cpp" />
     <ClCompile Include="Engine\Lighting\Light.cpp" />
-    <ClCompile Include="Engine\Core\BaseEngine\OffScreenRnederingSprite.cpp" />
+    <ClCompile Include="Engine\Core\BaseEngine\OffScreenRnedering.cpp" />
     <ClCompile Include="Engine\Core\Shader\Shader.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -82,7 +82,7 @@
     <ClInclude Include="Application\Scene\GameScene.h" />
     <ClInclude Include="Application\Scene\MyGame.h" />
     <ClInclude Include="Engine\Lighting\Light.h" />
-    <ClInclude Include="Engine\Core\BaseEngine\OffScreenRnederingSprite.h" />
+    <ClInclude Include="Engine\Core\BaseEngine\OffScreenRnedering.h" />
     <ClInclude Include="Engine\Core\Shader\Shader.h" />
   </ItemGroup>
   <ItemGroup>

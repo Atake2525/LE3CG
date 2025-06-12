@@ -47,6 +47,7 @@ void MyGame::Update() {
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
+	directxBase->Update();
 	gameScene->Update();
 
 	if (gameScene->isFinished())

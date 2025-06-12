@@ -1,11 +1,12 @@
 #include <d3d12.h>
 #include <wrl.h>
 #include <dxcapi.h>
+#include "Vector4.h"
 #pragma once
 
 class DirectXBase;
 
-class OffScreenRnederingSprite
+class OffScreenRnedering
 {
 public:
 	/// <summary>
@@ -13,12 +14,19 @@ public:
 	/// </summary>
 	void Initialize(DirectXBase* directxBase);
 
+
+	void Update();
+
 	/// <summary>
 	/// 共通描画設定
 	/// </summary>
-	void ShaderDraw();
+	void Draw();
 
 	DirectXBase* GetDxBase() const { return directxBase_; }
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> GetRenderTextureResource() const { return renderTextureResource; }
+
+	const Vector4 GetRenderTargetClearValue() const { return renderTargetClearValue; }
 
 private:
 	DirectXBase* directxBase_ = nullptr;
@@ -61,9 +69,29 @@ private:
 	// DepthStencilStateの設定
 	D3D12_DEPTH_STENCIL_DESC depthStencilDesc{};
 
+	D3D12_CPU_DESCRIPTOR_HANDLE srvCPUHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE srvGPUHandle;
+
+	const Vector4 renderTargetClearValue{ 1.0f, 0.0f, 0.0f, 1.0f }; // 分かりやすい赤にする
+
 	/// GraphicsPipeLineState
 	// PSOを作成する
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
 
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPilelineState = nullptr;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> renderTextureResource;
+
+	struct Monotone
+	{
+		float x;
+		float y;
+		float z;
+	};
+
+	Monotone monotone;
+
+	Monotone test;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> monotoneResouce;
 };
