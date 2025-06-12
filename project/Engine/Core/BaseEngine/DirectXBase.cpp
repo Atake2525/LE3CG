@@ -116,7 +116,7 @@ void DirectXBase::InitializeDevice() {
 	// 使用するアダプタ用の変数、最初、nullptrを入れておく
 	ComPtr<IDXGIAdapter4> useAdapter = nullptr;
 	// 良い順にアダプタを読む
-	for (UINT i = 0; i < dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&useAdapter)) != DXGI_ERROR_NOT_FOUND; ++i) {
+	for (UINT i = 0; /*i <*/ dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&useAdapter)) != DXGI_ERROR_NOT_FOUND; ++i) {
 		// アダプターの情報を取得する
 		DXGI_ADAPTER_DESC3 adapterDesc{};
 		hr = useAdapter->GetDesc3(&adapterDesc);
@@ -366,11 +366,6 @@ void DirectXBase::PreDraw() {
 	commandList->RSSetViewports(1, &viewPort);       // Viewportを設定
 	commandList->RSSetScissorRects(1, &scissorRect); // Scirssorを設定
 
-	commandList->SetGraphicsRootSignature(rootSignature.Get());
-	commandList->SetPipelineState(graphicsPilelineState.Get());
-	commandList->SetGraphicsRootDescriptorTable(2, srvGPUHandle);
-
-
 	commandList->DrawInstanced(3, 1, 0, 0);
 }
 
@@ -420,7 +415,6 @@ void DirectXBase::PostDraw() {
 }
 
 void DirectXBase::PreDrawRenderTexture() {
-	renderTextureResource = CreateRenderTextureResource(device, WinApp::kClientWidth, WinApp::kClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, renderTargetClearValue);
 	device->CreateRenderTargetView(renderTextureResource.Get(), &rtvDesc, GetCPUDescriptorHandle(rtvDescriptorHeap, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV), 2));
 	rtvTextureHandle = GetCPUDescriptorHandle(rtvDescriptorHeap, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV), 2);
 	// これから書き込むバックバッファのインデックスを取得
@@ -466,6 +460,10 @@ void DirectXBase::PreDrawRenderTexture() {
 void DirectXBase::PostDrawRenderTexture() {
 	// これから書き込むバックバッファのインデックスを取得
 	backBufferIndex = swapChain->GetCurrentBackBufferIndex();
+
+	commandList->SetGraphicsRootSignature(rootSignature.Get());
+	commandList->SetPipelineState(graphicsPilelineState.Get());
+	commandList->SetGraphicsRootDescriptorTable(2, srvGPUHandle);
 
 	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
@@ -696,6 +694,8 @@ void DirectXBase::InitializeRenderTargetView() {
 	//renderTextureResource = CreateRenderTextureResource(device, WinApp::kClientWidth, WinApp::kClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, renderTargetClearValue);
 	//device->CreateRenderTargetView(renderTextureResource.Get(), &rtvDesc, GetCPUDescriptorHandle(rtvDescriptorHeap, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV), 0));
 
+	renderTextureResource = CreateRenderTextureResource(device, WinApp::kClientWidth, WinApp::kClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, renderTargetClearValue);
+
 	// SRVの設定。FormatはResourceと同じにしておく
 	D3D12_SHADER_RESOURCE_VIEW_DESC renderTextureSrvDesc{};
 	renderTextureSrvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
@@ -703,7 +703,7 @@ void DirectXBase::InitializeRenderTargetView() {
 	renderTextureSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	renderTextureSrvDesc.Texture2D.MipLevels = 1;
 
-	srvCPUHandle = GetCPUDescriptorHandle(srvDescriptorHeap, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV), 1);
+	srvCPUHandle = GetSRVCPUDescriptorHandle(1);
 	srvGPUHandle = GetSRVGPUDescriptorHandle(1);
 	// SRVの生成
 	device->CreateShaderResourceView(renderTextureResource.Get(), &renderTextureSrvDesc, srvCPUHandle);

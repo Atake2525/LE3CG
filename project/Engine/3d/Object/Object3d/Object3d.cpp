@@ -231,7 +231,7 @@ void Object3d::CreateAABB() {
 	}
 }
 
-const bool& Object3d::CheckCollision(Object3d* object) const {
+const bool Object3d::CheckCollision(Object3d* object) const {
 	return CollisionAABB(aabb, object->GetAABB());
 }
 

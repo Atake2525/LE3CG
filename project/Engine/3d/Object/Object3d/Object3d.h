@@ -167,7 +167,7 @@ public:
 
 public:
 	// 衝突チェック(AABBとAABB)
-	const bool& CheckCollision(Object3d* object) const;
+	const bool CheckCollision(Object3d* object) const;
 
 	//const bool& CheckCollisionSphere(const Sphere& sphere) const;
 

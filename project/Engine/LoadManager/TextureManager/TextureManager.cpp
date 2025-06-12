@@ -9,8 +9,8 @@ using namespace StringUtility;
 
 TextureManager* TextureManager::instance = nullptr;
 
-// ImGuiで0番を使用するため、1番から使用
-uint32_t TextureManager::kSRVIndexTop = 1;
+// ImGuiで0番を、PostEffectで1番を使用するため、2番から使用
+uint32_t TextureManager::kSRVIndexTop = 2;
 
 TextureManager* TextureManager::GetInstance() {
 	if (instance == nullptr) {
