@@ -5,8 +5,9 @@
     <FxCompile Include="Resources\shaders\Object3d.VS.hlsl" />
     <FxCompile Include="Resources\shaders\Particle.PS.hlsl" />
     <FxCompile Include="Resources\shaders\Particle.VS.hlsl" />
-    <FxCompile Include="Resources\shaders\CopyImage.PS.hlsl" />
-    <FxCompile Include="Resources\shaders\CopyImage.VS.hlsl" />
+    <FxCompile Include="Resources\shaders\Fullscreen.PS.hlsl" />
+    <FxCompile Include="Resources\shaders\Fullscreen.VS.hlsl" />
+    <FxCompile Include="Resources\shaders\Grayscale.PS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Audio\Audio.cpp" />
@@ -90,7 +91,7 @@
   <ItemGroup>
     <None Include="Resources\shaders\Object3d.hlsli" />
     <None Include="Resources\shaders\Particle.hlsli" />
-    <None Include="Resources\shaders\CopyImage.hlsli" />
+    <None Include="Resources\shaders\Fullscreen.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="externels\imgui\LICENSE.txt" />

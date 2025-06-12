@@ -11,6 +11,7 @@
 #include <thread>
 #include "externels/DirectXTex/DirectXTex.h"
 #include "Vector4.h"
+#include "Vector3.h"
 
 
 class DirectXBase {
@@ -235,7 +236,7 @@ private:
 	D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
 	// Resource作る度に配列を増やしす
 	// RootParameter作成、PixelShaderのMatrixShaderのTransform
-	D3D12_ROOT_PARAMETER rootParameters[3] = {};
+	D3D12_ROOT_PARAMETER rootParameters[4] = {};
 	// シリアライズしてバイナリにする
 	Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob = nullptr;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
@@ -263,4 +264,9 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPilelineState = nullptr;
 
 	uint32_t textureIndex;
+
+	struct Monotone
+	{
+		Vector3 monotone;
+	};
 };

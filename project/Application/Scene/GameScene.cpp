@@ -122,11 +122,11 @@ void GameScene::Draw() {
 
 	SpriteBase::GetInstance()->ShaderDraw();
 
-	sprite->Draw();
+	//sprite->Draw();
 
 	Object3dBase::GetInstance()->ShaderDraw();
 
-	//object3d->Draw();
+	object3d->Draw();
 
 }
 
