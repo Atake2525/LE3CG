@@ -7,8 +7,8 @@ void Sprite::SetTransform(Transform& transform){
 	position.x = transform.translate.x;
 	position.y = transform.translate.y;
 	rotation = transform.rotate.z;
-	scale.x = transform.rotate.x;
-	scale.y = transform.rotate.y;
+	scale.x = transform.scale.x;
+	scale.y = transform.scale.y;
 }
 
 //void Sprite::SetMaterial(Material* material){ 
@@ -54,6 +54,7 @@ void Sprite::Initialize(std::string textureFilePath) {
 	// TransformationMatrixBufferViewの作成
 	SetTransformatinMatrix();
 
+	TextureManager::GetInstance()->LoadTexture(textureFilePath);
 	textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(textureFilePath);
 	AdjustTextureSize();
 }
@@ -118,6 +119,92 @@ void Sprite::Update() {
 	transform.translate = {position.x, position.y, 0.0f};
 	transform.rotate = {0.0f, 0.0f, rotation};
 	transform.scale = {scale.x, scale.y, 0.1f};
+
+
+
+	Matrix4x4 uvTransformMatrix = MakeScaleMatrix(uvTransform.scale);
+	uvTransformMatrix = Multiply(uvTransformMatrix, MakeRotateZMatrix(uvTransform.rotate.z));
+	uvTransformMatrix = Multiply(uvTransformMatrix, MakeTranslateMatrix(uvTransform.translate));
+	materialData->uvTransform = uvTransformMatrix;
+
+	// ゲームの処理
+	//  Sprite用のWorldViewProjectionMatrixを作る
+	//  SpriteのTransform処理
+	Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
+	Matrix4x4 viewMatrix = MakeIdentity4x4();
+	Matrix4x4 projectionMatrix = MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0.0f, 100.0f);
+	Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
+	transformationMatrixData->WVP = worldViewProjectionMatrix;
+	transformationMatrixData->World = worldMatrix;
+}
+
+void Sprite::TriangleUpdate() {
+	// アンカーポイントの設定
+	float left = 0.0f - anchorPoint.x;
+	float right = 1.0f - anchorPoint.x;
+	float midH = 0.5f - anchorPoint.x;
+	float top = 0.0f - anchorPoint.y;
+	float bottom = 1.0f - anchorPoint.y;
+	float midV = 0.5f - anchorPoint.y;
+
+	// 左右上下フリップの設定
+
+	// 左右反転
+	if (isFlipX) {
+		left = -left;
+		right = -right;
+		midH = -midH;
+	}
+	// 上下反転
+	if (isFlipY) {
+		top = -top;
+		bottom = -bottom;
+		midV = -midV;
+	}
+
+	// テクスチャ範囲指定の設定
+	const DirectX::TexMetadata& metadata = TextureManager::GetInstance()->GetMetaData(textureIndex);
+	float tex_left = textureLeftTop.x / metadata.width;
+	float tex_right = (textureLeftTop.x + textureSize.x) / metadata.width;
+	float tex_top = textureLeftTop.y / metadata.height;
+	float tex_bottom = (textureLeftTop.y + textureSize.y) / metadata.height;
+	float tex_midH = (textureLeftTop.x + textureSize.x) / (metadata.width * 2.0f);
+	float tex_midV = (textureLeftTop.y + textureSize.y) / (metadata.height * 2.0f);
+
+	// sprite(頂点データ)の設定
+	vertexData[0].position = { left, bottom, 0.0f, 1.0f }; // 左下
+	vertexData[0].texcoord = { tex_left, tex_bottom };
+	vertexData[1].position = { midH, midV, 0.0f, 1.0f }; // 中央上
+	vertexData[1].texcoord = { tex_midH, tex_midV };
+	vertexData[2].position = { right, bottom, 0.0f, 1.0f }; // 右下
+	vertexData[2].texcoord = { tex_right, tex_bottom };
+
+	//vertexData[0].position = { 0.0f, 1.0f, 0.0f, 1.0f }; // 左下
+	//vertexData[0].texcoord = { 0.0f, 1.0f };
+	//vertexData[1].position = { 0.5f, 0.0f, 0.0f, 1.0f }; // 中央上
+	//vertexData[1].texcoord = { 0.5f, 0.0f };
+	//vertexData[2].position = { 1.0f, 1.0f, 0.0f, 1.0f }; // 右下
+	//vertexData[2].texcoord = { 1.0f, 1.0f };
+
+	indexData[0] = 0;
+	indexData[1] = 1;
+	indexData[2] = 2;
+
+	Transform transform{
+		  {1.0f, 1.0f, 1.0f},
+		  {0.0f, 0.0f, 0.0f},
+		  {0.0f, 0.0f, 0.0f}
+	};
+
+	Transform uvTransform{
+		{1.0f, 1.0f, 1.0f},
+		{0.0f, 0.0f, 0.0f},
+		{0.0f, 0.0f, 0.0f},
+	};
+
+	transform.translate = { position.x, position.y, 0.0f };
+	transform.rotate = { 0.0f, 0.0f, rotation };
+	transform.scale = { scale.x, scale.y, 0.1f };
 
 
 

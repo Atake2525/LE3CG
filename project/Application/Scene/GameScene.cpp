@@ -7,8 +7,6 @@ void GameScene::Initialize() {
 
 	ModelManager::GetInstance()->LoadModel("Resources/Model/obj", "terrain.obj");
 
-	TextureManager::GetInstance()->LoadTexture("Resources/uvChecker.png");
-
 	camera = new Camera();
 	camera->SetRotate(Vector3(0.36f, 0.0f, 0.0f));
 
@@ -22,7 +20,15 @@ void GameScene::Initialize() {
 	object3d->SetModel("terrain.obj");
 
 	sprite = new Sprite();
-	sprite->Initialize("Resources/uvChecker.png");
+	sprite->Initialize("Resources/Debug/white1x1.png");
+	leftTop = { 0.0f, 0.0f };
+	transformSprite = {
+		{200.0f, 200.0f, 1.0f},
+		{0.0f, 0.0f, 0.0f},
+		{640.0f, 360.0f, 1.0f}
+	};
+	sprite->SetTransform(transformSprite);
+	sprite->SetTextureLeftTop(leftTop);
 
 	cameraTransform.scale = { 1.0f, 1.0f, 1.0f };
 
@@ -41,17 +47,11 @@ void GameScene::Update() {
 		ImGui::DragFloat3("Scale", &cameraTransform.scale.x, 0.1f);
 		ImGui::TreePop();
 	}
-	if (ImGui::TreeNode("Model")) {
-		ImGui::DragFloat3("Tranlate", &modelTransform.translate.x, 0.1f);
-		ImGui::DragFloat3("Rotate", &modelTransform.rotate.x, 0.1f);
-		ImGui::DragFloat3("Scale", &modelTransform.scale.x, 0.1f);
-		if (ImGui::TreeNode("AABB")) {
-			ImGui::DragFloat3("Min", &aabb.min.x, 0.1f);
-			ImGui::DragFloat3("Max", &aabb.max.x, 0.1f);
-
-			ImGui::TreePop();
-		}
-		ImGui::Checkbox("EnableLihting", &enableLighting);
+	if (ImGui::TreeNode("Sprite")) {
+		ImGui::DragFloat3("Tranlate", &transformSprite.translate.x, 1.0f);
+		ImGui::DragFloat("Rotate", &transformSprite.rotate.z, 0.01f);
+		ImGui::DragFloat3("Scale", &transformSprite.scale.x, 1.0f);
+		ImGui::DragFloat2("Min", &leftTop.x, 0.1f);
 		ImGui::TreePop();
 	}
 	ImGui::End();
@@ -110,7 +110,9 @@ void GameScene::Update() {
 	object3d->SetEnableLighting(enableLighting);
 	object3d->Update();
 	aabb = object3d->GetAABB();
-	sprite->Update();
+	sprite->SetTransform(transformSprite);
+	sprite->SetTextureLeftTop(leftTop);
+	sprite->TriangleUpdate();
 	
 	input->Update();
 
@@ -120,11 +122,11 @@ void GameScene::Draw() {
 
 	SpriteBase::GetInstance()->ShaderDraw();
 
-	//sprite->Draw();
+	sprite->Draw();
 
 	Object3dBase::GetInstance()->ShaderDraw();
 
-	object3d->Draw();
+	//object3d->Draw();
 
 }
 

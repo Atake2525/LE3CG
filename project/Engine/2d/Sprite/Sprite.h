@@ -20,6 +20,11 @@ public:
 	void Update();
 
 	/// <summary>
+	/// 更新(三角形)
+	/// </summary>
+	void TriangleUpdate();
+
+	/// <summary>
 	/// テクスチャ変更
 	/// </summary>
 	void ChangeTexture(std::string textureFilePath);

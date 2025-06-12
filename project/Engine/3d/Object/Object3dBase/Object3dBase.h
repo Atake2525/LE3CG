@@ -1,6 +1,7 @@
 #include <d3d12.h>
 #include <dxcapi.h>
 #include <wrl.h>
+#include "Shader.h"
 #pragma once
 
 class DirectXBase;
@@ -80,9 +81,12 @@ private:
 	// RasiterzerStateの設定
 	D3D12_RASTERIZER_DESC rasterizerDesc{};
 
-	Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob;
+	//Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob;
 
-	Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob;
+	//Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob;
+
+	Shader vs;
+	Shader ps;
 
 	// DepthStencilStateの設定
 	D3D12_DEPTH_STENCIL_DESC depthStencilDesc{};
