@@ -11,10 +11,13 @@
 #include <thread>
 #include "externels/DirectXTex/DirectXTex.h"
 #include "Vector4.h"
-
+#include "Vector3.h"
+#include "OffScreenRnedering.h"
 
 class DirectXBase {
 public:
+
+	void Update();
 	/// <summary>
 	/// 初期化
 	/// </summary>
@@ -74,6 +77,9 @@ public:
 	// DirectX12のTextureResourceを作る
 	Microsoft::WRL::ComPtr<ID3D12Resource> CreateTextureResource(const DirectX::TexMetadata& metadata);
 
+	// RenderTextureの生成
+	Microsoft::WRL::ComPtr<ID3D12Resource> CreateRenderTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, int32_t width, int32_t height, DXGI_FORMAT format, const Vector4& clearColor);
+
 	void UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage& mipImages);
 
 private:
@@ -83,9 +89,6 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Device> device;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> CreateDepthStencilTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, int32_t width, int32_t height);
-
-	// RenderTextureの生成
-	Microsoft::WRL::ComPtr<ID3D12Resource> CreateRenderTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, int32_t width, int32_t height, DXGI_FORMAT format, const Vector4& clearColor);
 
 	// FPS固定初期化
 	void InitializeFixFPS();
@@ -178,12 +181,12 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[2];
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvTextureHandle;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> renderTextureResource;
+	//Microsoft::WRL::ComPtr<ID3D12Resource> renderTextureResource;
 
-	const Vector4 renderTargetClearValue{ 1.0f, 0.0f, 0.0f, 1.0f }; // 分かりやすい赤にする
+	//const Vector4 renderTargetClearValue{ 1.0f, 0.0f, 0.0f, 1.0f }; // 分かりやすい赤にする
 
-	D3D12_CPU_DESCRIPTOR_HANDLE srvCPUHandle;
-	D3D12_GPU_DESCRIPTOR_HANDLE srvGPUHandle;
+	/*D3D12_CPU_DESCRIPTOR_HANDLE srvCPUHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE srvGPUHandle;*/
 
 
 	//// フェンス
@@ -263,4 +266,18 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPilelineState = nullptr;
 
 	uint32_t textureIndex;
+
+	OffScreenRnedering* offscreen = nullptr;
+
+	float clearColor[4];
+
+	//struct Monotone
+	//{
+	//	float x, y, z;
+	//};
+
+	////Monotone monotone = { 107.0f, 74.0f, 43.0f };
+	//Monotone monotone;
+
+	//Microsoft::WRL::ComPtr<ID3D12Resource> monotoneResouce;
 };
