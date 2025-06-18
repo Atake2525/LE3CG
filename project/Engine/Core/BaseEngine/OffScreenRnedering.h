@@ -7,9 +7,17 @@
 
 class DirectXBase;
 
-struct Monotone
+struct Grayscale
 {
+	bool enableGrayscale;
 	Vector3 toneColor;
+};
+
+struct Vignette
+{
+	bool enableVignette;
+	float intensity; //!< 輝度
+	float scale;
 };
 
 class OffScreenRnedering
@@ -54,7 +62,7 @@ private:
 	D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
 	// Resource作る度に配列を増やしす
 	// RootParameter作成、PixelShaderのMatrixShaderのTransform
-	D3D12_ROOT_PARAMETER rootParameters[3] = {};
+	D3D12_ROOT_PARAMETER rootParameters[4] = {};
 	// シリアライズしてバイナリにする
 	Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob = nullptr;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
@@ -88,9 +96,11 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> renderTextureResource;
 
-	Monotone* monotone = nullptr;
+	Grayscale* grayslcae = nullptr;
 
-	Monotone test;
+	Microsoft::WRL::ComPtr<ID3D12Resource> grayscaleResouce;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> monotoneResouce;
+	Vignette* vignette = nullptr;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> vignetteResource;
 };

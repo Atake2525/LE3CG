@@ -30,15 +30,32 @@ void OffScreenRnedering::Initialize(DirectXBase* directxBase) {
 	// SRVの生成
 	directxBase_->GetDevice()->CreateShaderResourceView(renderTextureResource.Get(), &renderTextureSrvDesc, srvCPUHandle);
 
-	monotoneResouce = directxBase_->CreateBufferResource(sizeof(Monotone));
-	monotoneResouce->Map(0, nullptr, reinterpret_cast<void**>(&monotone));
-	monotone->toneColor = { 1.0f, 73.0f / 107.0f, 43.0f / 107.0f };
+	grayscaleResouce = directxBase_->CreateBufferResource(sizeof(Grayscale));
+	grayscaleResouce->Map(0, nullptr, reinterpret_cast<void**>(&grayslcae));
+	grayslcae->toneColor = { 1.0f, 73.0f / 107.0f, 43.0f / 107.0f };
+
+	vignetteResource = directxBase_->CreateBufferResource(sizeof(Vignette));
+	vignetteResource->Map(0, nullptr, reinterpret_cast<void**>(&vignette));
+	vignette->enableVignette = true;
+	vignette->intensity = 16.0f;
+	vignette->scale = 0.8f;
 }
 
 void OffScreenRnedering::Update() {
+	ImGui::SetWindowPos(ImVec2{ 0.0f, 0.0f });
+	ImGui::SetWindowSize(ImVec2{ 100.0f, 200.0f});
 	ImGui::Begin("OffScreen");
-	ImGui::SliderFloat("Tone", &monotone->toneColor.x, 0.0f, 1.0f);
-	ImGui::ColorEdit3("ColTone", &monotone->toneColor.x);
+	if (ImGui::TreeNode("Grayscale")) {
+		ImGui::Checkbox("enableGrayscale", &grayslcae->enableGrayscale);
+		ImGui::ColorEdit3("ColTone", &grayslcae->toneColor.x);
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Vignette")) {
+		ImGui::Checkbox("enableVignetting", &vignette->enableVignette);
+		ImGui::DragFloat("intensity", &vignette->intensity, 0.1f);
+		ImGui::DragFloat("scale", &vignette->scale, 0.1f);
+		ImGui::TreePop();
+	}
 	ImGui::End();
 
 }
@@ -79,9 +96,9 @@ void OffScreenRnedering::CreateRootSignature() {
 	rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;              // CBVを使う
 	rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;           // PixelShaderで使う
 	rootParameters[2].Descriptor.ShaderRegister = 0;                              // レジスタ番号0とバインド
-	//rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
-	//rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // PixelShaderを使う
-	//rootParameters[3].Descriptor.ShaderRegister = 0;                    // レジスタ番号0を使う
+	rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
+	rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // PixelShaderを使う
+	rootParameters[3].Descriptor.ShaderRegister = 1;                    // レジスタ番号0を使う
 	descriptionRootSignature.pParameters = rootParameters;              // ルートパラメータ配列へのポインタ
 	descriptionRootSignature.NumParameters = _countof(rootParameters);  // 配列の長さ
 
@@ -125,7 +142,7 @@ void OffScreenRnedering::CreateRootSignature() {
 	// Shaderをコンパイルする
 	vertexShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Fullscreen.VS.hlsl", L"vs_6_0");
 	assert(vertexShaderBlob != nullptr);
-	pixelShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Grayscale.PS.hlsl", L"ps_6_0");
+	pixelShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Vignetting.PS.hlsl", L"ps_6_0");
 	assert(pixelShaderBlob != nullptr);
 
 	// DepthStencilStateの設定
@@ -168,8 +185,10 @@ void OffScreenRnedering::Draw() {
 	directxBase_->GetCommandList()->SetGraphicsRootSignature(rootSignature.Get());
 	// PSOを設定
 	directxBase_->GetCommandList()->SetPipelineState(graphicsPilelineState.Get());
-	// モノトーンカラーの設定
-	directxBase_->GetCommandList()->SetGraphicsRootConstantBufferView(2, monotoneResouce->GetGPUVirtualAddress());
+	// grayscale
+	directxBase_->GetCommandList()->SetGraphicsRootConstantBufferView(2, grayscaleResouce->GetGPUVirtualAddress());
+	// vignetting
+	directxBase_->GetCommandList()->SetGraphicsRootConstantBufferView(3, vignetteResource->GetGPUVirtualAddress());
 	// srvGPUHandleの設定
 	directxBase_->GetCommandList()->SetGraphicsRootDescriptorTable(1, srvGPUHandle);
 	// Draw call
