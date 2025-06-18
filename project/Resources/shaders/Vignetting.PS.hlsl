@@ -8,7 +8,7 @@ struct Vignette
 };
 ConstantBuffer<Vignette> gVigentte : register(b1);
 
-PixelShaderOutput main(VertexShaderOutput input)
+PixelShaderOutput ShadingVignetting(VertexShaderOutput input)
 {
     PixelShaderOutput output;
     output = ShadingGrayscale(input); 

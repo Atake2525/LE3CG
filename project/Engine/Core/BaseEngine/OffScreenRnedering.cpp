@@ -42,9 +42,9 @@ void OffScreenRnedering::Initialize(DirectXBase* directxBase) {
 }
 
 void OffScreenRnedering::Update() {
-	ImGui::SetWindowPos(ImVec2{ 0.0f, 0.0f });
-	ImGui::SetWindowSize(ImVec2{ 100.0f, 200.0f});
 	ImGui::Begin("OffScreen");
+	ImGui::SetWindowPos(ImVec2{ 0.0f, 0.0f });
+	ImGui::SetWindowSize(ImVec2{ 300.0f, 400.0f});
 	if (ImGui::TreeNode("Grayscale")) {
 		ImGui::Checkbox("enableGrayscale", &grayslcae->enableGrayscale);
 		ImGui::ColorEdit3("ColTone", &grayslcae->toneColor.x);
@@ -142,7 +142,7 @@ void OffScreenRnedering::CreateRootSignature() {
 	// Shaderをコンパイルする
 	vertexShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Fullscreen.VS.hlsl", L"vs_6_0");
 	assert(vertexShaderBlob != nullptr);
-	pixelShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Vignetting.PS.hlsl", L"ps_6_0");
+	pixelShaderBlob = directxBase_->CompileShader(L"Resources/shaders/BoxFilter.PS.hlsl", L"ps_6_0");
 	assert(pixelShaderBlob != nullptr);
 
 	// DepthStencilStateの設定
