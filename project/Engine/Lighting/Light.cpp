@@ -36,8 +36,8 @@ void Light::Initialize(DirectXBase* directxBase) {
 
 	pointLightData->color = { 1.0f, 1.0f, 1.0f, 1.0f };
 	pointLightData->position = { 0.0f, 2.0f, 0.0f };
-	pointLightData->intensity = 0.0f;
-	pointLightData->radius = 5.0f;
+	pointLightData->intensity = 1.0f;
+	pointLightData->radius = 15.0f;
 	pointLightData->dacay = 5.0f;
 	pointLightData->specularColor = { 1.0f, 1.0f, 1.0f };
 
@@ -49,7 +49,7 @@ void Light::Initialize(DirectXBase* directxBase) {
 	spotLightData->position = { 0.0f, 1.25f, 0.0f };
 	spotLightData->distance = 7.0f;
 	spotLightData->direction = Normalize({ 0.0f, 0.0f, -1.0f });
-	spotLightData->intensity = 1.0f;
+	spotLightData->intensity = 0.0f;
 	spotLightData->dacay = 2.0f;
 	spotLightData->cosAngle = std::cos(std::numbers::pi_v<float> / 3.0f);
 	spotLightData->cosFalloffStart = std::cos(std::numbers::pi_v<float> / 2.6f);

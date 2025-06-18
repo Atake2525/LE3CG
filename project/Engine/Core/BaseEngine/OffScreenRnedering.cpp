@@ -30,21 +30,17 @@ void OffScreenRnedering::Initialize(DirectXBase* directxBase) {
 	// SRVの生成
 	directxBase_->GetDevice()->CreateShaderResourceView(renderTextureResource.Get(), &renderTextureSrvDesc, srvCPUHandle);
 
-	monotone = { 1.0f, 1.0f, 1.0f }; // 画面が黒くなる
 	monotoneResouce = directxBase_->CreateBufferResource(sizeof(Monotone));
 	monotoneResouce->Map(0, nullptr, reinterpret_cast<void**>(&monotone));
-	monotone = { 1.0f, 1.0f, 1.0f }; // 画面が黒くなる
-	test = monotone;
+	monotone->toneColor = { 1.0f, 73.0f / 107.0f, 43.0f / 107.0f };
 }
 
 void OffScreenRnedering::Update() {
 	ImGui::Begin("OffScreen");
-	ImGui::SliderFloat("Tone", &test.x, 0.0f, 1.0f);
-	ImGui::ColorEdit3("ColTone", &test.x);
+	ImGui::SliderFloat("Tone", &monotone->toneColor.x, 0.0f, 1.0f);
+	ImGui::ColorEdit3("ColTone", &monotone->toneColor.x);
 	ImGui::End();
 
-	//monotone = test;
-	monotone.x -= 0.001f;
 }
 
 void OffScreenRnedering::CreateRootSignature() {

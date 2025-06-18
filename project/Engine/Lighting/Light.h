@@ -33,7 +33,7 @@ struct SpotLight {
 	float cosAngle;        //!< スポットライトの余弦
 	float cosFalloffStart; // falloffが開始される角度
 	Vector3 specularColor;
-	float padding[2];
+	float padding[1];
 };
 
 class DirectXBase;

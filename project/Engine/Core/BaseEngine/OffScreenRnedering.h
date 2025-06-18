@@ -2,9 +2,15 @@
 #include <wrl.h>
 #include <dxcapi.h>
 #include "Vector4.h"
+#include "Vector3.h"
 #pragma once
 
 class DirectXBase;
+
+struct Monotone
+{
+	Vector3 toneColor;
+};
 
 class OffScreenRnedering
 {
@@ -82,14 +88,7 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> renderTextureResource;
 
-	struct Monotone
-	{
-		float x;
-		float y;
-		float z;
-	};
-
-	Monotone monotone;
+	Monotone* monotone = nullptr;
 
 	Monotone test;
 
