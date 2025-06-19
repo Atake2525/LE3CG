@@ -315,20 +315,24 @@ Matrix4x4 MakeRotateZMatrix(float radian) {
 	return ans;
 }
 
-Matrix4x4 MakeQuaternionMatrix(Quaternion q) {
-	Matrix4x4 result = { 0 };
-
-	result.m[0][0] = pow(q.w, 2.0f) + pow(q.x, 2.0f) - pow(q.y, 2.0f) - pow(q.z, 2.0f);
-	result.m[0][1] = 2 * (q.x * q.y + q.w * q.z);
-	result.m[0][2] = 2 * (q.x * q.z - q.w * q.y);
-	
-	result.m[1][0] = 2 * (q.x * q.y - q.w * q.z);
-	result.m[1][1] = pow(q.w, 2.0f) - pow(q.x, 2.0f) + pow(q.y, 2.0f) - pow(q.z, 2.0f);
-	result.m[1][2] = 2 * (q.y * q.z + q.w * q.x);
-	
-	result.m[2][0] = 2 * (q.x * q.y + q.w * q.z);
-	result.m[2][1] = 2 * (q.y * q.z - q.w * q.x);
-	result.m[2][2] = pow(q.w, 2.0f) - pow(q.x, 2.0f) - pow(q.y, 2.0f) + pow(q.z, 2.0f);
+Matrix4x4 MakeQuaternionMatrix(Quaternion quaternion) {
+	Matrix4x4 result;
+	result.m[0][0] = (quaternion.w * quaternion.w) + (quaternion.x * quaternion.x) - (quaternion.y * quaternion.y) - (quaternion.z * quaternion.z);
+	result.m[0][1] = 2 * (quaternion.x * quaternion.y + quaternion.w * quaternion.z);
+	result.m[0][2] = 2 * (quaternion.x * quaternion.z - quaternion.w * quaternion.y);
+	result.m[0][3] = 0.0f;
+	result.m[1][0] = 2 * (quaternion.x * quaternion.y - quaternion.w * quaternion.z);
+	result.m[1][1] = (quaternion.w * quaternion.w) - (quaternion.x * quaternion.x) + (quaternion.y * quaternion.y) - (quaternion.z * quaternion.z);
+	result.m[1][2] = 2 * (quaternion.y * quaternion.z + quaternion.w * quaternion.x);
+	result.m[1][3] = 0.0f;
+	result.m[2][0] = 2 * (quaternion.x * quaternion.z + quaternion.w * quaternion.y);
+	result.m[2][1] = 2 * (quaternion.y * quaternion.z - quaternion.w * quaternion.x);
+	result.m[2][2] = (quaternion.w * quaternion.w) - (quaternion.x * quaternion.x) - (quaternion.y * quaternion.y) + (quaternion.z * quaternion.z);
+	result.m[2][3] = 0.0f;
+	result.m[3][0] = 0.0f;
+	result.m[3][1] = 0.0f;
+	result.m[3][2] = 0.0f;
+	result.m[3][3] = 1.0f;
 
 	return result;
 }
@@ -416,12 +420,13 @@ Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Quaternion& rotate, const
 	Matrix4x4 R = { 0 };
 	Matrix4x4 ans = { 0 };
 
-	Matrix4x4 rot = MakeQuaternionMatrix(rotate);
+	//Matrix4x4 rot = MakeQuaternionMatrix(rotate);
 
-	Vector3	quat = TransformNormal(scale, rot);
+	//Vector3	quat = TransformNormal(scale, rot);
 
-	R = Multiply(MakeRotateXMatrix(quat.x), Multiply(MakeRotateYMatrix(quat.y), MakeRotateZMatrix(quat.z)));
+	//R = Multiply(MakeRotateXMatrix(quat.x), Multiply(MakeRotateYMatrix(quat.y), MakeRotateZMatrix(quat.z)));
 
+	R = MakeQuaternionMatrix(rotate);
 
 	ans.m[0][0] = scale.x * R.m[0][0];
 	ans.m[0][1] = scale.x * R.m[0][1];
@@ -632,3 +637,62 @@ Quaternion Lerp(const Quaternion& q1, const Quaternion& q2, float t)
 	result.z = t * q1.z + (1.0f - t) * q2.z;
 	return result;
 }
+
+Matrix4x4 DirectionToDirection(const Vector3& from, const Vector3& to)
+{
+	Vector3 n = Normalize(Cross(from, to));
+	float cos = Dot(from, to);
+	float sin = Length(Cross(from, to));
+
+	float epsilon = 1e-6f;
+	Vector3 axis = {};
+	if (std::abs(cos + 1.0f) <= epsilon) {
+		if (std::abs(from.x) > epsilon || std::abs(from.y) > epsilon) {
+			//(ux≠0||uy≠0)の際のaxisの値を入れる
+			axis.x = from.y;
+			axis.y = -from.x;
+			axis.z = 0.0f;
+		}
+		else if (std::abs(from.x) > epsilon || std::abs(from.z) > epsilon) {
+			//(ux≠0||uz≠0)の際のaxisの値を入れる
+			axis.x = from.z;
+			axis.y = 0.0f;
+			axis.z = -from.x;
+		}
+		else {
+			// zero vector
+			assert(false);
+		}
+
+		axis = Normalize(axis);
+	}
+	else {
+		axis = Normalize(n);
+	}
+
+	Matrix4x4 directionMatrix = {};
+
+	directionMatrix.m[0][0] = axis.x * axis.x * (1 - cos) + cos;
+	directionMatrix.m[0][1] = axis.x * axis.y * (1 - cos) + axis.z * sin;
+	directionMatrix.m[0][2] = axis.x * axis.z * (1 - cos) - axis.y * sin;
+	directionMatrix.m[0][3] = 0.0f;
+
+	directionMatrix.m[1][0] = axis.x * axis.y * (1 - cos) - axis.z * sin;
+	directionMatrix.m[1][1] = axis.y * axis.y * (1 - cos) + cos;
+	directionMatrix.m[1][2] = axis.y * axis.z * (1 - cos) + axis.x * sin;
+	directionMatrix.m[1][3] = 0.0f;
+
+	directionMatrix.m[2][0] = axis.x * axis.z * (1 - cos) + axis.y * sin;
+	directionMatrix.m[2][1] = axis.y * axis.z * (1 - cos) - axis.x * sin;
+	directionMatrix.m[2][2] = axis.z * axis.z * (1 - cos) + cos;
+	directionMatrix.m[2][3] = 0.0f;
+
+	directionMatrix.m[3][0] = 0.0f;
+	directionMatrix.m[3][1] = 0.0f;
+	directionMatrix.m[3][2] = 0.0f;
+	directionMatrix.m[3][3] = 1.0f;
+
+	return directionMatrix;
+}
+
+float Dot(const Vector3& v1, const Vector3& v2) { return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z; }

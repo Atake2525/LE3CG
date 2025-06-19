@@ -5,9 +5,6 @@
 #include "TextureManager.h"
 #include "Logger.h"
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
 
 using namespace Logger;
 
@@ -148,6 +145,7 @@ ModelData Model::LoadModelFile(const std::string& directoryPath, const std::stri
 			modelData.material.textureFilePath = "Resources/Debug/white1x1.png";
 		}
 	}
+	modelData.rootNode = ReadNode(scene->mRootNode);
 	return modelData;
 }
 
@@ -202,6 +200,7 @@ Animation Model::LoadAnimationFile(const std::string& directoryPath, const std::
 		animation.nodeAnimation[nodeAnimationAssimp->mNodeName.C_Str()] = nodeAnimation;
 		animation.nodeAnimationName = nodeAnimationAssimp->mNodeName.C_Str();
 	}
+	
 	// 解析したアニメーションを返す
 	return animation;
 }
@@ -221,4 +220,26 @@ void Model::CreateVertexBufferView() {
 
 void Model::CreateMaterialResouce() { 
 	materialResource = ModelBase::GetInstance()->GetDxBase()->CreateBufferResource(sizeof(Material)); 
+}
+
+Node Model::ReadNode(aiNode* node) {
+	Node result;
+	aiMatrix4x4 aiLocalMatrix = node->mTransformation; // nodeのlocalMatrixを取得
+	aiLocalMatrix.Transpose(); // 列ベクトル形式を行ベクトル形式位に転置
+	// 他の要素も同様に
+	for (int j = 0; j < 4; j++)
+	{
+		for (int k = 0; k < 4; k++)
+		{
+			result.localMatrix.m[j][k] = aiLocalMatrix[j][k];
+		}
+	}
+	result.name = node->mName.C_Str(); // Node名を格納
+	result.children.resize(node->mNumChildren); // 子供の数だけ確保
+	for (uint32_t childIndex = 0; childIndex < node->mNumChildren; ++childIndex)
+	{
+		// 再帰的に読んで階層構造を作っていく
+		result.children[childIndex] = ReadNode(node->mChildren[childIndex]);
+	}
+	return result;
 }

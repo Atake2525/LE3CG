@@ -59,7 +59,7 @@ Matrix4x4 MakeRotateYMatrix(float radian);
 Matrix4x4 MakeRotateZMatrix(float radian);
 
 // 任意軸回転行列
-Matrix4x4 MakeQuaternionMatrix(Quaternion q);
+Matrix4x4 MakeQuaternionMatrix(Quaternion qaternion);
 
 //座標変換
 Vector3 MatrixTransform(const Vector3& vector, const Matrix4x4& matrix);
@@ -143,3 +143,7 @@ Vector3 Lerp(const Vector3& v1, const Vector3& v2, float t);
 
 // 線形補間
 Quaternion Lerp(const Quaternion& v1, const Quaternion& v2, float t);
+
+Matrix4x4 DirectionToDirection(const Vector3& from, const Vector3& to);
+
+float Dot(const Vector3& v1, const Vector3& v2);

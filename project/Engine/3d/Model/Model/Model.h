@@ -13,6 +13,10 @@
 #pragma once
 #include "Animator.h"
 
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 
 struct VertexData {
 	Vector4 position;
@@ -35,9 +39,16 @@ struct MaterialData {
 	uint32_t textureIndex = 0;
 };
 
+struct Node {
+	Matrix4x4 localMatrix;
+	std::string name;
+	std::vector<Node> children;
+};
+
 struct ModelData {
 	std::vector<VertexData> vertices;
 	MaterialData material;
+	Node rootNode;
 };
 
 class Model {
@@ -98,6 +109,8 @@ private:
 	static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& fileName);
 	// .objファイルの読み取り
 	static ModelData LoadModelFile(const std::string& directoryPath, const std::string& fileName);
+
+	static Node ReadNode(aiNode* node);
 
 	// アニメーションをロード
 	static Animation LoadAnimationFile(const std::string& directoryPath, const std::string& filename);

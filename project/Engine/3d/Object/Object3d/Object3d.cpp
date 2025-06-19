@@ -116,6 +116,7 @@ void Object3d::Update() {
 	{
 		scale = CalculateValue(rootNodeAnimation.scale.KeyFrames, animationTime);
 	}
+
 	Matrix4x4 localMatrix = MakeAffineMatrix(scale, rotate, translate);
 
 	Vector3 rot = SwapDegree({ rotate.x, rotate.y, rotate.z});
@@ -138,7 +139,7 @@ void Object3d::Update() {
 	Matrix4x4 worldViewProjectionMatrix;
 	if (camera) {
 		const Matrix4x4& viewProjectionMatrix = camera->GetViewProjectionMatrix();
-		worldViewProjectionMatrix = Multiply(Multiply(worldMatrix, localMatrix), viewProjectionMatrix);
+		worldViewProjectionMatrix = Multiply(Multiply(worldMatrix, Multiply(localMatrix, model_->GetModelData().rootNode.localMatrix)), viewProjectionMatrix);
 	} else {
 		worldViewProjectionMatrix = worldMatrix;
 	}
