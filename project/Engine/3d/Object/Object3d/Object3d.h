@@ -10,6 +10,7 @@
 #include "AABB.h"
 #include "kMath.h"
 #include "Quaternion.h"
+#include "Animator.h"
 
 #pragma once
 
@@ -31,12 +32,6 @@ public: // メンバ関数
 	void Draw();
 
 	void SetModel(const std::string& filePath);
-
-	/*void SetDirectionalLight(DirectionalLight* lightData);
-
-	void SetPointLight(PointLight* lightData);
-
-	void SetSpotLight(SpotLight* lightData);*/
 
 	void SetCamera(Camera* camera) { this->camera = camera; }
 
@@ -83,26 +78,12 @@ private:
 	// 座標変換行列リソース内のデータを指すポインタ
 	TransformationMatrix* transformationMatrix = nullptr;
 
-	//// 平行光源リソースのバッファリソース
-	//Microsoft::WRL::ComPtr<ID3D12Resource> directionalLightResource;
-	//// 平行光源リソース内のデータを指すポインタ
-	//DirectionalLight* directionalLightData = nullptr;
-
-	//// 点光源リソースのバッファリソース
-	//Microsoft::WRL::ComPtr<ID3D12Resource> pointLightResource;
-	//// 点光源リソース内のデータを指すポインタ
-	//PointLight* pointLightData = nullptr;
-
-	//// スポットライトリソースのバッファリソース
-	//Microsoft::WRL::ComPtr<ID3D12Resource> spotLightResource;
-	//// スポットライトリソース内のデータを指すポインタ
-	//SpotLight* spotLightData = nullptr;
-
 	// PhongShading用カメラ
 	Microsoft::WRL::ComPtr<ID3D12Resource> cameraResource;
 	CameraForGPU* cameraData = nullptr;
 
 	Model* model_ = nullptr;
+	Animation animation;
 
 	// 衝突判定に必要
 
@@ -113,6 +94,8 @@ private:
 	AABB first;
 
 	Matrix4x4 worldMatrix;
+
+	float animationTime = 0.0f;
 
 public:
 
@@ -129,9 +112,7 @@ public:
 	// Gettre(Color)
 	const Vector4& GetColor() const;
 	// Getter(EnableLighting)
-	const bool& GetEnableLighting() const;
-	// Getter(specularColor)
-	//const Vector3& GetSpecularColor() const;
+	const bool GetEnableLighting() const;
 	// Getter(shininess)
 	const float& GetShininess() const;
 	// Getter(AABB)
@@ -155,8 +136,6 @@ public:
 	void SetColor(const Vector4& color);
 	// Setter(EnableLighting)
 	void SetEnableLighting(const bool& enableLighting);
-	// Setter(specularColor)
-	//void SetSpecularColor(const Vector3& specularColor);
 	// Setter(shininess)
 	void SetShininess(const float& shininess);
 	// 任意軸回転の軸を指定の回転角に変更
@@ -175,14 +154,7 @@ private:
 
 	// TransformationMatrixResourceを作る
 	void CreateTransformationMatrixResrouce();
-	// LightResourceを作る
-	//void CreateLightResource();
-	//// DirectionalLightResourceを作る
-	//void CreateDirectionalLightResource();
-	//// PointLightResourceを作る
-	//void CreatePointLightResource();
-	//// SpotLightResourceを作る
-	//void CreateSpotLightResource();
+
 	// CameraResourceを作る
 	void CreateCameraResource();
 

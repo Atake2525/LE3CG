@@ -81,6 +81,7 @@
     <ClInclude Include="Engine\Lighting\Light.h" />
     <ClInclude Include="Engine\LoadManager\ParticleManager\ParticleManager.h" />
     <ClInclude Include="Engine\LoadManager\ParticleManager\ParticleEmitter.h" />
+    <ClInclude Include="Engine\Math\Animator.h" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="externels\assimp\lib\Release\assimp-vc143-mtd.lib" />

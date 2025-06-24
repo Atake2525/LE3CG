@@ -5,7 +5,7 @@
 
 void GameScene::Initialize() {
 
-	ModelManager::GetInstance()->LoadModel("Resources/Model/obj", "terrain.obj");
+	ModelManager::GetInstance()->LoadModel("Resources/Model/gltf", "AnimatedCube.gltf", false, true);
 
 	TextureManager::GetInstance()->LoadTexture("Resources/uvChecker.png");
 
@@ -25,7 +25,7 @@ void GameScene::Initialize() {
 
 	object3d = new Object3d();
 	object3d->Initialize();
-	object3d->SetModel("terrain.obj");
+	object3d->SetModel("AnimatedCube.gltf");
 
 	sprite = new Sprite();
 	sprite->Initialize("Resources/uvChecker.png");
@@ -39,7 +39,9 @@ void GameScene::Initialize() {
 
 void GameScene::Update() {
 
-	/*ImGui::Begin("State");
+	ImGui::Begin("State");
+	ImGui::SetWindowPos(ImVec2(0.0f, 0.0f));
+	ImGui::SetWindowSize(ImVec2(300.0f, WinApp::kClientHeight));
 	if (ImGui::TreeNode("Camera")) {
 		ImGui::DragFloat3("Tranlate", &cameraTransform.translate.x, 0.1f);
 		ImGui::DragFloat3("Rotate", &cameraTransform.rotate.x, 0.1f);
@@ -59,7 +61,7 @@ void GameScene::Update() {
 		ImGui::Checkbox("EnableLihting", &enableLighting);
 		ImGui::TreePop();
 	}
-	ImGui::End();*/
+	ImGui::End();
 
 	if (input->TriggerKey(DIK_ESCAPE))
 	{

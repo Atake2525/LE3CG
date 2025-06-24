@@ -73,6 +73,8 @@ Matrix4x4 Multiply(const Matrix4x4& m1, const Matrix4x4& m2);
 //３次元アフィン変換行列
 Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Vector3& translate);
 
+Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Quaternion& rotate, const Vector3& translate);
+
 //3次元アフィン変換行列Quaternion版
 Matrix4x4 MakeAffineMatrixInQuaternion(const Vector3& scale, const Matrix4x4& axisAngle, const Vector3& translate);
 
@@ -131,3 +133,15 @@ float Length(const Vector3& v);
 
 // ベクトル変換
 Vector3 TransformNormal(const Vector3& v, const Matrix4x4& m);
+
+Quaternion Slerp(const Quaternion& q0, const Quaternion& q1, float t);
+
+Vector3 Lerp(const Vector3& v1, const Vector3& v2, float t);
+
+float Dot(const Quaternion& v1, const Quaternion& v2);
+
+// 逆Quaternionを返す
+Quaternion Inverse(const Quaternion& quaternion);
+
+// Quaternionのnormを返す
+float Norm(const Quaternion& quaternion);

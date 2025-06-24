@@ -3,15 +3,18 @@
 #include "DirectXBase.h"
 #include "kMath.h"
 #include "TextureManager.h"
+#include "Logger.h"
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
+using namespace Logger;
 
-void Model::Initialize(std::string directoryPath, std::string filename, bool enableLighting) {
+void Model::Initialize(std::string directoryPath, std::string filename, bool enableLighting, bool isAnimation) {
 	// モデル読み込み
 	modelData = LoadModelFile(directoryPath, filename);
-
+	if (isAnimation)
+	{
+		this->isAnimation = isAnimation;
+		animation = LoadAnimationFile(directoryPath, filename);
+	}
 	// Resourceの作成
 	CreateVertexResource();
 	CreateMaterialResouce();
@@ -138,78 +141,79 @@ ModelData Model::LoadModelFile(const std::string& directoryPath, const std::stri
 			modelData.material.textureFilePath = "Resources/Debug/white1x1.png";
 		}
 	}
+	modelData.rootNode = ReadNode(scene->mRootNode);
 	return modelData;
-	//// 1. 中で必要となる変数の宣言
-	//std::vector<Vector4> positions; // 位置
-	//std::vector<Vector3> normals;   // 法線
-	//std::vector<Vector2> texcoords; // テクスチャ座標
-	//std::string line;               // ファイルから読んだ1行を格納するもの
+}
 
-	//// 2. ファイルを開く
-	//std::ifstream file(directoryPath + "/" + filename); // ファイルを開く
-	//assert(file.is_open());                             // とりあえず開けなかったら止める
-	//// 3. 実際にファイルを読み、ModelDataを構築していく
-	//while (std::getline(file, line)) {
-	//	std::string identifier;
-	//	std::istringstream s(line);
-	//	s >> identifier; // 先頭の識別子を読む
+Animation Model::LoadAnimationFile(const std::string& directoryPath, const std::string& filename)
+{
+	Animation result;
+	Assimp::Importer importer;
+	std::string filePath = directoryPath + "/" + filename;
+	const aiScene* scene = importer.ReadFile(filePath.c_str(), 0);
+	if (scene->mNumAnimations == 0)// アニメーションが無い
+	{
+		Log("this scene have not Animation");
+		assert(0);
+	};
+	aiAnimation* animationAssimp = scene->mAnimations[0]; // 最初の差にメーションだけ採用。
+	result.duration = float(animationAssimp->mDuration / animationAssimp->mTicksPerSecond); // 時間の単位を秒に変換
+	// NodeAnimationを解析する
+	// assimpでは個々のNodeのAnimationをchannelと読んでいるのでchannelを回してNodeAnimationの情報をとってくる
+	for (uint32_t channelIndex = 0; channelIndex < animationAssimp->mNumChannels; ++channelIndex)
+	{
+		aiNodeAnim* nodeAnimationAssimp = animationAssimp->mChannels[channelIndex];
+		NodeAnimation& nodeAnimation = result.nodeAnimations[nodeAnimationAssimp->mNodeName.C_Str()];
+		for (uint32_t keyIndex = 0; keyIndex < nodeAnimationAssimp->mNumPositionKeys; ++keyIndex)
+		{
+			aiVectorKey& keyAssimp = nodeAnimationAssimp->mPositionKeys[keyIndex];
+			KeyframeVector3 keyframe;
+			keyframe.time = float(keyAssimp.mTime / animationAssimp->mTicksPerSecond); // ここも秒に変換
+			keyframe.value = { -keyAssimp.mValue.x, keyAssimp.mValue.y, keyAssimp.mValue.z }; // 右手->左手
+			nodeAnimation.translate.push_back(keyframe);
+		}
+		for (uint32_t keyIndex = 0; keyIndex < nodeAnimationAssimp->mNumRotationKeys; ++keyIndex)
+		{
+			aiQuatKey& keyAssimp = nodeAnimationAssimp->mRotationKeys[keyIndex];
+			KeyframeQuaternion keyframe;
+			keyframe.time = float(keyAssimp.mTime / animationAssimp->mTicksPerSecond); // ここも秒に変換
+			keyframe.value = { keyAssimp.mValue.x, -keyAssimp.mValue.y, -keyAssimp.mValue.z, keyAssimp.mValue.w }; // 右手->左手
+			nodeAnimation.rotate.push_back(keyframe);
+		}
+		for (uint32_t keyIndex = 0; keyIndex < nodeAnimationAssimp->mNumScalingKeys; ++keyIndex)
+		{
+			aiVectorKey& keyAssimp = nodeAnimationAssimp->mScalingKeys[keyIndex];
+			KeyframeVector3 keyframe;
+			keyframe.time = float(keyAssimp.mTime / animationAssimp->mTicksPerSecond); // ここも秒に変換
+			keyframe.value = { keyAssimp.mValue.x, keyAssimp.mValue.y, keyAssimp.mValue.z }; // 右手->左手
+			nodeAnimation.scale.push_back(keyframe);
+		}
+	}
 
-	//	// identifierに応じた処理
-	//	if (identifier == "v") {
-	//		Vector4 position;
-	//		s >> position.x >> position.y >> position.z;
-	//		position.w = 1.0f;
-	//		positions.push_back(position);
-	//	} else if (identifier == "vt") {
-	//		Vector2 texcoord;
-	//		s >> texcoord.x >> texcoord.y;
-	//		texcoords.push_back(texcoord);
-	//	} else if (identifier == "vn") {
-	//		Vector3 normal;
-	//		s >> normal.x >> normal.y >> normal.z;
-	//		normals.push_back(normal);
-	//	} else if (identifier == "f") {
-	//		VertexData triangle[3];
 
-	//		// 面は三角形限定。その他は未対応
-	//		for (int32_t faceVertex = 0; faceVertex < 3; ++faceVertex) {
-	//			std::string vertexDefinition;
-	//			s >> vertexDefinition;
-	//			// 頂点の要素へのIndexは「位置/UV/法線」で格納されているので、分解してIndexを取得する
-	//			std::istringstream v(vertexDefinition);
-	//			uint32_t elementIndices[3];
-	//			for (int32_t element = 0; element < 3; ++element) {
-	//				std::string index;
-	//				std::getline(v, index, '/'); // /区切りでインデックスを読んでいく
-	//				elementIndices[element] = std::stoi(index);
-	//			}
-	//			// 要素へのIndexから、実際の要素を値を取得して、頂点を構築する
-	//			Vector4 position = positions[elementIndices[0] - 1];
-	//			Vector2 texcoord = texcoords[elementIndices[1] - 1];
-	//			Vector3 normal = normals[elementIndices[2] - 1];
-	//			// VertexData vertex = { position, texcoord, normal };
-	//			// modelData.vertices.push_back(vertex);
-	//			position.x *= -1.0f;
-	//			//position.y *= -1.0f;
-	//			normal.x *= -1.0f;
-	//			texcoord.y = 1.0f - texcoord.y;
+	return result;
+}
 
-	//			triangle[faceVertex] = {position, texcoord, normal};
-	//		}
-	//		// 頂点を逆順で登録することで、周り順を逆にする
-	//		modelData.vertices.push_back(triangle[2]);
-	//		modelData.vertices.push_back(triangle[1]);
-	//		modelData.vertices.push_back(triangle[0]);
-	//	} else if (identifier == "mtllib") {
-	//		// materialTemplateLibraryファイルの名前を取得する
-	//		std::string materialFilename;
-	//		s >> materialFilename;
-	//		// 基本的にobjファイルと同一階層にmtlは存在させるので、ディレクトリ名とファイル名を渡す
-	//		modelData.material = LoadMaterialTemplateFile(directoryPath, materialFilename);
-	//	}
-	//}
-	//// 4. ModelDataを返す
-	//return modelData;
+Node Model::ReadNode(aiNode* node)
+{
+	Node result;
+	aiMatrix4x4 aiLocalMatrix = node->mTransformation; // nodeのlocalMatrixを取得
+	aiLocalMatrix.Transpose(); // 列ベクトル形式を行ベクトル形式に転置
+	for (int j = 0; j < 4; j++)
+	{
+		for (int k = 0; k < 4; k++)
+		{
+			result.localMatrix.m[j][k] = aiLocalMatrix[j][k]; // 他の要素も同様に
+		}
+	}
+	result.name = node->mName.C_Str(); // Node名を格納
+	result.children.resize(node->mNumChildren); // 子供の数だけ確保
+	for (uint32_t childIndex = 0; childIndex < node->mNumChildren; ++childIndex)
+	{
+		// 再帰的に読んで階層構造を作っていく
+		result.children[childIndex] = ReadNode(node->mChildren[childIndex]);
+	}
+	return result;
 }
 
 void Model::CreateVertexResource() {

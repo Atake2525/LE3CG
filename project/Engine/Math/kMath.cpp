@@ -392,6 +392,31 @@ Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Ve
 	ans.m[3][2] = translate.z;
 
 	return ans;
+}
+Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Quaternion& rotate, const Vector3& translate)
+{
+	Matrix4x4 R = { 0 };
+	Matrix4x4 ans = { 0 };
+
+	//R = Multiply(MakeRotateXMatrix(rotate.x), Multiply(MakeRotateYMatrix(rotate.y), MakeRotateZMatrix(rotate.z)));
+
+	R = MakeRotateMatrix(rotate);
+
+	ans.m[0][0] = scale.x * R.m[0][0];
+	ans.m[0][1] = scale.x * R.m[0][1];
+	ans.m[0][2] = scale.x * R.m[0][2];
+	ans.m[1][0] = scale.y * R.m[1][0];
+	ans.m[1][1] = scale.y * R.m[1][1];
+	ans.m[1][2] = scale.y * R.m[1][2];
+	ans.m[2][0] = scale.z * R.m[2][0];
+	ans.m[2][1] = scale.z * R.m[2][1];
+	ans.m[2][2] = scale.z * R.m[2][2];
+	ans.m[3][3] = 1;
+	ans.m[3][0] = translate.x;
+	ans.m[3][1] = translate.y;
+	ans.m[3][2] = translate.z;
+
+	return ans;
 };
 
 //３次元アフィン変換行列
@@ -566,5 +591,54 @@ Vector3 TransformNormal(const Vector3& v, const Matrix4x4& m) {
 		v.x * m.m[0][1] + v.y * m.m[1][1] + v.z * m.m[2][1],
 		v.x * m.m[0][2] + v.y * m.m[1][2] + v.z * m.m[2][2],
 	};
+	return result;
+}
+
+Quaternion Slerp(const Quaternion& q0, const Quaternion& q1, float t) {
+	Quaternion q = q0;
+	Quaternion result;
+	float dot = Dot(q0, q1);
+	if (dot < 0) {
+		q = Inverse(q0);
+		dot = -dot;
+	}
+	// なす角を求める
+	float theta = std::acos(dot);
+
+	float scale0 = sin((1 - t) * theta) / sin(theta);
+	float scale1 = sin(t * theta) / sin(theta);
+
+	result.x = scale0 * q.x + scale1 * q1.x;
+	result.y = scale0 * q.y + scale1 * q1.y;
+	result.z = scale0 * q.z + scale1 * q1.z;
+	result.w = scale0 * q.w + scale1 * q1.w;
+	return result;
+}
+
+Vector3 Lerp(const Vector3& v1, const Vector3& v2, float t) {
+	Vector3 ans = { 0 };
+	ans.x = t * v1.x + (1.0f - t) * v2.x;
+	ans.y = t * v1.y + (1.0f - t) * v2.y;
+	ans.z = t * v1.z + (1.0f - t) * v2.z;
+	return ans;
+}
+
+float Dot(const Quaternion& v1, const Quaternion& v2) { return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z + v1.w * v2.w; }
+
+// 逆Quaternionを返す
+Quaternion Inverse(const Quaternion& quaternion) {
+	Quaternion result;
+	Quaternion q = Conjugate(quaternion);
+	float length = Norm(quaternion) * Norm(quaternion);
+	assert(length != 0.0f);
+	result = q / length;
+
+	return result;
+}
+
+// Quaternionのnormを返す
+float Norm(const Quaternion& quaternion) {
+	float result;
+	result = sqrtf((quaternion.w * quaternion.w) + (quaternion.x * quaternion.x) + (quaternion.y * quaternion.y) + (quaternion.z * quaternion.z));
 	return result;
 }

@@ -8,6 +8,11 @@
 #include "Vector3.h"
 #include "Vector4.h"
 #include "Matrix4x4.h"
+#include "Animator.h"
+
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 #pragma once
 
@@ -32,16 +37,25 @@ struct MaterialData {
 	uint32_t textureIndex = 0;
 };
 
+struct Node
+{
+	Matrix4x4 localMatrix;
+	std::string name;
+	std::vector<Node> children;
+};
+
 struct ModelData {
 	std::vector<VertexData> vertices;
 	MaterialData material;
+	Node rootNode;
 };
+
 
 class Model {
 public:
 
 	// 初期化
-	void Initialize(std::string directoryPath, std::string filename, bool enableLighting);
+	void Initialize(std::string directoryPath, std::string filename, bool enableLighting, bool isAnimation);
 	
 	// 更新
 	void Draw();
@@ -58,6 +72,9 @@ public:
 	const float& GetShininess() const { return materialData->shininess; }
 	// Getter(ModelData)
 	const ModelData& GetModelData() const { return modelData;}
+	// Getter(Animation)
+	const Animation& GetAnimation() const { return animation; }
+	const bool& IsAnimation() const { return isAnimation; }
 	// Getter(ModelData vertices)
 	const std::vector<VertexData>& GetVertices() const { return modelData.vertices; }
 
@@ -82,6 +99,9 @@ private:
 	// Objファイルのデータ
 	ModelData modelData;
 
+	Animation animation;
+	bool isAnimation = false;
+
 	// マテリアルのバッファリソース
 	Microsoft::WRL::ComPtr<ID3D12Resource> materialResource;
 	// マテリアルバッファリソース内のデータを指すポインタ
@@ -92,6 +112,10 @@ private:
 	static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& fileName);
 	// .objファイルの読み取り
 	static ModelData LoadModelFile(const std::string& directoryPath, const std::string& fileName);
+	// アニメーションの読み込み
+	static Animation LoadAnimationFile(const std::string& directoryPath, const std::string& filename);
+	// ノード情報のロード
+	static Node ReadNode(aiNode* node);
 
 	// VertexResourceを作成する
 	void CreateVertexResource();

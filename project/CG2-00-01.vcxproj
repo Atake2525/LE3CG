@@ -147,6 +147,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3d\Camera\Camera.h" />
     <ClInclude Include="Engine\BlackBox\LeakChecker\D3DResourceLeakChecker.h" />
     <ClInclude Include="Engine\Core\BaseEngine\DirectXBase.h" />
+    <ClInclude Include="Engine\Math\Animator.h" />
     <ClInclude Include="externels\imgui\imconfig.h" />
     <ClInclude Include="externels\imgui\imgui.h" />
     <ClInclude Include="externels\imgui\imgui_impl_dx12.h" />
