@@ -20,6 +20,12 @@ struct Vignette
 	float scale;
 };
 
+struct BoxFilter
+{
+	bool enableBoxFilter;
+	int size;
+};
+
 class OffScreenRnedering
 {
 public:
@@ -62,7 +68,7 @@ private:
 	D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
 	// Resource作る度に配列を増やしす
 	// RootParameter作成、PixelShaderのMatrixShaderのTransform
-	D3D12_ROOT_PARAMETER rootParameters[4] = {};
+	D3D12_ROOT_PARAMETER rootParameters[5] = {};
 	// シリアライズしてバイナリにする
 	Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob = nullptr;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
@@ -103,4 +109,8 @@ private:
 	Vignette* vignette = nullptr;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> vignetteResource;
+
+	BoxFilter* boxFilter = nullptr;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> boxFilterResource;
 };
