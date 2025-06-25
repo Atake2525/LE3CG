@@ -39,12 +39,17 @@ void OffScreenRnedering::Initialize(DirectXBase* directxBase) {
 	vignette->enableVignette = true;
 	vignette->intensity = 16.0f;
 	vignette->scale = 0.8f;
+
+	boxFilterResource = directxBase_->CreateBufferResource(sizeof(BoxFilter));
+	boxFilterResource->Map(0, nullptr, reinterpret_cast<void**>(&boxFilter));
+	boxFilter->enableBoxFilter = true;
+	boxFilter->size = 5;
 }
 
 void OffScreenRnedering::Update() {
-	ImGui::SetWindowPos(ImVec2{ 0.0f, 0.0f });
-	ImGui::SetWindowSize(ImVec2{ 100.0f, 200.0f});
 	ImGui::Begin("OffScreen");
+	ImGui::SetWindowPos(ImVec2{ 0.0f, 0.0f });
+	ImGui::SetWindowSize(ImVec2{ 300.0f, WinApp::kClientHeight});
 	if (ImGui::TreeNode("Grayscale")) {
 		ImGui::Checkbox("enableGrayscale", &grayslcae->enableGrayscale);
 		ImGui::ColorEdit3("ColTone", &grayslcae->toneColor.x);
@@ -54,6 +59,11 @@ void OffScreenRnedering::Update() {
 		ImGui::Checkbox("enableVignetting", &vignette->enableVignette);
 		ImGui::DragFloat("intensity", &vignette->intensity, 0.1f);
 		ImGui::DragFloat("scale", &vignette->scale, 0.1f);
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("BoxFilter")) {
+		ImGui::Checkbox("enableBoxFilter", &boxFilter->enableBoxFilter);
+		ImGui::SliderInt("size", &boxFilter->size, 1, 25);
 		ImGui::TreePop();
 	}
 	ImGui::End();
@@ -99,6 +109,9 @@ void OffScreenRnedering::CreateRootSignature() {
 	rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
 	rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // PixelShaderを使う
 	rootParameters[3].Descriptor.ShaderRegister = 1;                    // レジスタ番号0を使う
+	rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
+	rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // PixelShaderを使う
+	rootParameters[4].Descriptor.ShaderRegister = 2;                    // レジスタ番号0を使う
 	descriptionRootSignature.pParameters = rootParameters;              // ルートパラメータ配列へのポインタ
 	descriptionRootSignature.NumParameters = _countof(rootParameters);  // 配列の長さ
 
@@ -142,7 +155,7 @@ void OffScreenRnedering::CreateRootSignature() {
 	// Shaderをコンパイルする
 	vertexShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Fullscreen.VS.hlsl", L"vs_6_0");
 	assert(vertexShaderBlob != nullptr);
-	pixelShaderBlob = directxBase_->CompileShader(L"Resources/shaders/Vignetting.PS.hlsl", L"ps_6_0");
+	pixelShaderBlob = directxBase_->CompileShader(L"Resources/shaders/BoxFilter.PS.hlsl", L"ps_6_0");
 	assert(pixelShaderBlob != nullptr);
 
 	// DepthStencilStateの設定
@@ -189,6 +202,8 @@ void OffScreenRnedering::Draw() {
 	directxBase_->GetCommandList()->SetGraphicsRootConstantBufferView(2, grayscaleResouce->GetGPUVirtualAddress());
 	// vignetting
 	directxBase_->GetCommandList()->SetGraphicsRootConstantBufferView(3, vignetteResource->GetGPUVirtualAddress());
+	// boxFilter
+	directxBase_->GetCommandList()->SetGraphicsRootConstantBufferView(4, boxFilterResource->GetGPUVirtualAddress());
 	// srvGPUHandleの設定
 	directxBase_->GetCommandList()->SetGraphicsRootDescriptorTable(1, srvGPUHandle);
 	// Draw call
